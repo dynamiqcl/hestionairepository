@@ -46,9 +46,13 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      const date = new Date();
+      const receiptId = `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
       const receiptData = {
         ...result.data,
         userId: req.user!.id,
+        receiptId,
         // Ensure numeric fields are properly formatted
         total: parseFloat(result.data.total.toString()),
         taxAmount: result.data.taxAmount ? parseFloat(result.data.taxAmount.toString()) : null,

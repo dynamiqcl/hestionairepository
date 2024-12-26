@@ -59,12 +59,12 @@ export default function ReceiptUpload() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
           facingMode: 'environment',
           width: { ideal: 1920 },
           height: { ideal: 1080 }
-        } 
+        }
       });
 
       if (videoRef.current) {
@@ -124,6 +124,21 @@ export default function ReceiptUpload() {
         description: "Analizando la imagen de la boleta...",
       });
 
+      // Crear ImageData para el preprocesamiento
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((resolve) => (img.onload = resolve));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("No se pudo crear el contexto 2D");
+
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // Procesar el texto con Tesseract
       const result = await Tesseract.recognize(file, 'spa', {
         logger: m => console.log(m)
       });
@@ -131,7 +146,8 @@ export default function ReceiptUpload() {
       console.log('Texto extraído:', result.data.text);
       const text = result.data.text;
 
-      const receiptData = categorizeReceipt(text);
+      // Usar el nuevo sistema de categorización con imagen y texto
+      const receiptData = await categorizeReceipt(text, imageData);
       console.log('Datos procesados:', receiptData);
 
       setValidation({

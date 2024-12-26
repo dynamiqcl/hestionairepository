@@ -57,10 +57,12 @@ export default function AuthPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Nombre de Usuario</Label>
+              <Label htmlFor="username">Correo Electrónico</Label>
               <Input
                 id="username"
+                type="email"
                 required
+                placeholder="correo@ejemplo.com"
                 value={formData.username}
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
@@ -74,6 +76,7 @@ export default function AuthPage() {
                 id="password"
                 type="password"
                 required
+                placeholder="Mínimo 6 caracteres"
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
@@ -87,6 +90,7 @@ export default function AuthPage() {
                 <Input
                   id="nombreCompleto"
                   required
+                  placeholder="Juan Pérez"
                   value={formData.nombreCompleto}
                   onChange={(e) =>
                     setFormData({ ...formData, nombreCompleto: e.target.value })

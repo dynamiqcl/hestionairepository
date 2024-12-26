@@ -41,6 +41,8 @@ export const insertReceiptSchema = baseInsertSchema.extend({
 });
 
 export const insertUserSchema = baseUserInsertSchema.extend({
+  username: z.string().email("Por favor ingresa un correo electrónico válido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   nombreCompleto: z.string().optional(),
 });
 

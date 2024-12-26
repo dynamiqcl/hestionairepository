@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, alertRules, alertNotifications, insertAlertRuleSchema, insertAlertNotificationSchema } from "@db/schema";
+import { receipts, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema } from "@db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { setupAuth } from "./auth";
 

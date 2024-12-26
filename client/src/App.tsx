@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import Dashboard from "./pages/Dashboard";
 import ReceiptUpload from "./pages/ReceiptUpload";
+import AlertsPage from "./pages/AlertsPage";
 import AuthPage from "./pages/AuthPage";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -28,6 +29,7 @@ function AppContent() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={ReceiptUpload} />
+        <Route path="/alerts" component={AlertsPage} />
       </Switch>
     </div>
   );

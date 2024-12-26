@@ -15,10 +15,10 @@ export const receipts = pgTable("receipts", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
   date: timestamp("date").notNull(),
-  total: numeric("total").notNull(),
+  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
   vendor: text("vendor"),
   category: text("category"),
-  taxAmount: numeric("tax_amount"),
+  taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }),
   rawText: text("raw_text"),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -33,11 +33,17 @@ const baseUserSelectSchema = createSelectSchema(users);
 
 // Extend the insert schema with custom validations
 export const insertReceiptSchema = baseInsertSchema.extend({
-  date: z.coerce.date().default(() => new Date()),
-  total: z.string().or(z.number()).transform(val => val.toString()),
+  date: z.coerce.date(),
+  total: z.string().or(z.number()).transform(val => 
+    typeof val === 'string' ? parseFloat(val) : val
+  ),
   vendor: z.string().optional(),
   category: z.string().optional(),
-  taxAmount: z.string().or(z.number()).transform(val => val.toString()).optional(),
+  taxAmount: z.string().or(z.number()).transform(val => 
+    typeof val === 'string' ? parseFloat(val) : val
+  ).optional(),
+  rawText: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 export const insertUserSchema = baseUserInsertSchema.extend({

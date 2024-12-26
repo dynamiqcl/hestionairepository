@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts } from "@db/schema";
+import { receipts, insertReceiptSchema } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -27,6 +27,7 @@ export function registerRoutes(app: Express): Server {
         .orderBy(desc(receipts.date));
       res.json(allReceipts);
     } catch (error) {
+      console.error("Error al obtener las boletas:", error);
       res.status(500).json({ error: "Error al obtener las boletas" });
     }
   });
@@ -34,16 +35,40 @@ export function registerRoutes(app: Express): Server {
   // Add new receipt for the logged in user
   app.post("/api/receipts", ensureAuth, async (req, res) => {
     try {
+      console.log("Datos recibidos:", req.body);
+
+      const result = insertReceiptSchema.safeParse(req.body);
+      if (!result.success) {
+        console.error("Error de validación:", result.error.issues);
+        return res.status(400).json({
+          error: "Datos de boleta inválidos",
+          details: result.error.issues.map(i => i.message).join(", ")
+        });
+      }
+
+      const receiptData = {
+        ...result.data,
+        userId: req.user!.id,
+        // Ensure numeric fields are properly formatted
+        total: parseFloat(result.data.total.toString()),
+        taxAmount: result.data.taxAmount ? parseFloat(result.data.taxAmount.toString()) : null,
+      };
+
+      console.log("Datos a insertar:", receiptData);
+
       const [newReceipt] = await db
         .insert(receipts)
-        .values({
-          ...req.body,
-          userId: req.user!.id,
-        })
+        .values(receiptData)
         .returning();
+
+      console.log("Boleta guardada:", newReceipt);
       res.json(newReceipt);
     } catch (error) {
-      res.status(500).json({ error: "Error al agregar la boleta" });
+      console.error("Error al agregar la boleta:", error);
+      res.status(500).json({ 
+        error: "Error al agregar la boleta",
+        details: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   });
 

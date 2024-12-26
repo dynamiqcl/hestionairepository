@@ -22,22 +22,38 @@ export default function ReceiptUpload() {
 
     setIsProcessing(true);
     try {
+      toast({
+        title: "Procesando",
+        description: "Analizando la imagen de la boleta...",
+      });
+
       // Process image with Tesseract OCR
-      const result = await Tesseract.recognize(file, 'spa');
+      const result = await Tesseract.recognize(file, 'spa', {
+        logger: m => console.log(m)
+      });
+      console.log('Texto extraído:', result.data.text);
       const text = result.data.text;
 
       // Extract receipt data using AI categorization
       const receiptData = categorizeReceipt(text);
+      console.log('Datos procesados:', receiptData);
 
-      await addReceipt({
+      // Create object URL for the image
+      const imageUrl = URL.createObjectURL(file);
+
+      const receiptToSave = {
         date: receiptData.date,
-        total: receiptData.total.toString(),
+        total: receiptData.total,
         vendor: receiptData.vendor,
         category: receiptData.category,
-        taxAmount: receiptData.taxAmount.toString(),
+        taxAmount: receiptData.taxAmount,
         rawText: text,
-        imageUrl: URL.createObjectURL(file)
-      });
+        imageUrl
+      };
+
+      console.log('Datos a enviar:', receiptToSave);
+
+      await addReceipt(receiptToSave);
 
       toast({
         title: "¡Éxito!",
@@ -49,7 +65,7 @@ export default function ReceiptUpload() {
       console.error('Error al procesar la boleta:', error);
       toast({
         title: "Error",
-        description: "No se pudo procesar la boleta. Por favor, intente nuevamente.",
+        description: error instanceof Error ? error.message : "No se pudo procesar la boleta. Por favor, intente nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -107,10 +123,6 @@ export default function ReceiptUpload() {
                 disabled={isProcessing}
               >
                 Cancelar
-              </Button>
-              <Button disabled={isProcessing}>
-                <Upload className="w-4 h-4 mr-2" />
-                Subir
               </Button>
             </div>
           </div>

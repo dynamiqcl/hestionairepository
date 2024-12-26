@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Camera, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Camera, AlertCircle, CheckCircle2, Upload } from "lucide-react";
 import Tesseract from 'tesseract.js';
 import { categorizeReceipt } from "@/lib/categorize";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ValidationResult {
   isValid: boolean;
@@ -29,12 +30,65 @@ export default function ReceiptUpload() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const { isMobile, hasCamera } = useIsMobile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsCapturing(true);
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo acceder a la cámara",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const captureImage = () => {
+    if (!videoRef.current) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      const file = new File([blob], "captura.jpg", { type: "image/jpeg" });
+      await processImage(file);
+
+      const stream = videoRef.current?.srcObject as MediaStream;
+      stream?.getTracks().forEach(track => track.stop());
+      setIsCapturing(false);
+    }, 'image/jpeg', 0.95);
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    await processImage(file);
+  };
 
-    // Mostrar preview de la imagen
+  const processImage = async (file: File) => {
     setPreview(URL.createObjectURL(file));
     setIsProcessing(true);
     setValidation(null);
@@ -45,7 +99,6 @@ export default function ReceiptUpload() {
         description: "Analizando la imagen de la boleta...",
       });
 
-      // Procesar imagen con Tesseract OCR
       const result = await Tesseract.recognize(file, 'spa', {
         logger: m => console.log(m)
       });
@@ -53,11 +106,9 @@ export default function ReceiptUpload() {
       console.log('Texto extraído:', result.data.text);
       const text = result.data.text;
 
-      // Extraer y validar datos
       const receiptData = categorizeReceipt(text);
       console.log('Datos procesados:', receiptData);
 
-      // Actualizar estado de validación
       setValidation({
         isValid: receiptData.isValid,
         validationIssues: receiptData.validationIssues,
@@ -73,7 +124,6 @@ export default function ReceiptUpload() {
         return;
       }
 
-      // Crear URL para la imagen
       const imageUrl = URL.createObjectURL(file);
 
       const receiptToSave = {
@@ -119,36 +169,78 @@ export default function ReceiptUpload() {
             <div className="grid w-full items-center gap-1.5">
               <Label htmlFor="receipt">Imagen de la Boleta</Label>
               <div className="mt-2">
-                <div className="flex items-center justify-center w-full">
-                  <label
-                    htmlFor="receipt"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 relative overflow-hidden"
-                  >
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Toca para tomar una foto o seleccionar una imagen
-                        </p>
-                      </div>
-                    )}
-                    <Input
-                      id="receipt"
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      disabled={isProcessing}
-                      onChange={handleFileUpload}
+                {isCapturing ? (
+                  <div className="relative">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full rounded-lg aspect-[3/4] object-cover"
                     />
-                  </label>
-                </div>
+                    <Button
+                      className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+                      onClick={captureImage}
+                      disabled={isProcessing}
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Capturar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-full">
+                    <label
+                      htmlFor="receipt"
+                      className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 relative overflow-hidden"
+                    >
+                      {preview ? (
+                        <img
+                          src={preview}
+                          alt="Preview"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {isMobile && hasCamera ? (
+                            <>
+                              <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
+                              <p className="text-sm text-center text-muted-foreground px-4">
+                                Toca para tomar una foto o seleccionar una imagen de tu galería
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                              <p className="text-sm text-center text-muted-foreground px-4">
+                                Arrastra y suelta una imagen o haz clic para seleccionar
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      <Input
+                        ref={fileInputRef}
+                        id="receipt"
+                        type="file"
+                        accept="image/*"
+                        capture={isMobile && hasCamera ? "environment" : undefined}
+                        className="hidden"
+                        disabled={isProcessing}
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+
+                    {isMobile && hasCamera && (
+                      <Button
+                        className="mt-4 w-full"
+                        onClick={startCamera}
+                        disabled={isProcessing}
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Usar Cámara
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

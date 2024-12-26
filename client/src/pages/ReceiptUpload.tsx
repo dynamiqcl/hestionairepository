@@ -6,10 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Camera, AlertCircle, CheckCircle2, Upload } from "lucide-react";
+import { Loader2, Camera, AlertCircle, CheckCircle2, Upload, Calendar } from "lucide-react";
 import Tesseract from 'tesseract.js';
 import { categorizeReceipt } from "@/lib/categorize";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ValidationResult {
   isValid: boolean;
@@ -23,6 +32,16 @@ interface ValidationResult {
   };
 }
 
+interface ExtractedData {
+  date: Date;
+  total: number;
+  vendor: string;
+  category: string;
+  taxAmount: number;
+}
+
+const categories = ['Alimentación', 'Transporte', 'Oficina', 'Otros'];
+
 export default function ReceiptUpload() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -34,6 +53,9 @@ export default function ReceiptUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [editedData, setEditedData] = useState<ExtractedData | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const startCamera = async () => {
     try {
@@ -92,6 +114,9 @@ export default function ReceiptUpload() {
     setPreview(URL.createObjectURL(file));
     setIsProcessing(true);
     setValidation(null);
+    setExtractedData(null);
+    setEditedData(null);
+    setIsEditing(false);
 
     try {
       toast({
@@ -115,25 +140,45 @@ export default function ReceiptUpload() {
         confidence: receiptData.confidence
       });
 
-      if (!receiptData.isValid) {
-        toast({
-          title: "Advertencia",
-          description: "La boleta podría no ser válida. Por favor, verifica los datos.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const imageUrl = URL.createObjectURL(file);
-
-      const receiptToSave = {
+      const extractedFields = {
         date: receiptData.date,
         total: receiptData.total,
         vendor: receiptData.vendor,
         category: receiptData.category,
         taxAmount: receiptData.taxAmount,
-        rawText: text,
-        imageUrl
+      };
+
+      setExtractedData(extractedFields);
+      setEditedData(extractedFields);
+      setIsEditing(true);
+
+      if (!receiptData.isValid) {
+        toast({
+          title: "Advertencia",
+          description: "Los datos extraídos podrían no ser precisos. Por favor, verifícalos antes de guardar.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error al procesar la boleta:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo procesar la boleta. Por favor, intente nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!editedData || !preview) return;
+
+    try {
+      const receiptToSave = {
+        ...editedData,
+        rawText: extractedData?.vendor || "",
+        imageUrl: preview
       };
 
       console.log('Datos a enviar:', receiptToSave);
@@ -147,14 +192,12 @@ export default function ReceiptUpload() {
 
       setLocation("/");
     } catch (error) {
-      console.error('Error al procesar la boleta:', error);
+      console.error('Error al guardar la boleta:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo procesar la boleta. Por favor, intente nuevamente.",
+        description: error instanceof Error ? error.message : "No se pudo guardar la boleta. Por favor, intente nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -244,43 +287,108 @@ export default function ReceiptUpload() {
               </div>
             </div>
 
-            {validation && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {validation.isValid ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-yellow-500" />
-                  )}
-                  <span className="font-medium">
-                    {validation.isValid ? 'Boleta Válida' : 'Validación Pendiente'}
-                  </span>
+            {isEditing && editedData && (
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
+                <h3 className="font-medium">Editar Datos Extraídos</h3>
+
+                <div className="space-y-2">
+                  <Label htmlFor="date">
+                    Fecha
+                    {validation && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (Confianza: {Math.round(validation.confidence.date * 100)}%)
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={format(editedData.date, 'yyyy-MM-dd')}
+                    onChange={(e) => setEditedData({
+                      ...editedData,
+                      date: new Date(e.target.value)
+                    })}
+                  />
                 </div>
 
-                <div className="space-y-1 text-sm">
-                  <p className="text-muted-foreground">
-                    Confianza de detección:
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>Categoría: {Math.round(validation.confidence.category * 100)}%</div>
-                    <div>Monto: {Math.round(validation.confidence.amount * 100)}%</div>
-                    <div>Fecha: {Math.round(validation.confidence.date * 100)}%</div>
-                    <div>Vendedor: {Math.round(validation.confidence.vendor * 100)}%</div>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="total">
+                    Monto Total (CLP)
+                    {validation && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (Confianza: {Math.round(validation.confidence.amount * 100)}%)
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="total"
+                    type="number"
+                    value={editedData.total}
+                    onChange={(e) => setEditedData({
+                      ...editedData,
+                      total: parseInt(e.target.value),
+                      taxAmount: Math.round(parseInt(e.target.value) * 0.19)
+                    })}
+                  />
                 </div>
 
-                {validation.validationIssues.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm font-medium text-yellow-600">
-                      Problemas detectados:
-                    </p>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground">
-                      {validation.validationIssues.map((issue, index) => (
-                        <li key={index}>{issue}</li>
+                <div className="space-y-2">
+                  <Label htmlFor="vendor">
+                    Proveedor
+                    {validation && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (Confianza: {Math.round(validation.confidence.vendor * 100)}%)
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="vendor"
+                    value={editedData.vendor}
+                    onChange={(e) => setEditedData({
+                      ...editedData,
+                      vendor: e.target.value
+                    })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">
+                    Categoría
+                    {validation && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (Confianza: {Math.round(validation.confidence.category * 100)}%)
+                      </span>
+                    )}
+                  </Label>
+                  <Select
+                    value={editedData.category}
+                    onValueChange={(value) => setEditedData({
+                      ...editedData,
+                      category: value
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
                       ))}
-                    </ul>
-                  </div>
-                )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="taxAmount">IVA Estimado (19%)</Label>
+                  <Input
+                    id="taxAmount"
+                    type="number"
+                    value={editedData.taxAmount}
+                    disabled
+                  />
+                </div>
               </div>
             )}
 
@@ -299,6 +407,14 @@ export default function ReceiptUpload() {
               >
                 Cancelar
               </Button>
+              {isEditing && (
+                <Button
+                  onClick={handleSave}
+                  disabled={isProcessing || !editedData}
+                >
+                  Guardar
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

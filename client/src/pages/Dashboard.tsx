@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2 } from "lucide-react";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
@@ -137,7 +137,16 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2">
           <Link href="/upload">
-            <Button>Subir Boleta</Button>
+            <Button>
+              <Receipt className="w-4 h-4 mr-2" />
+              Subir Boleta
+            </Button>
+          </Link>
+          <Link href="/alerts">
+            <Button variant="outline">
+              <Bell className="w-4 h-4 mr-2" />
+              Alertas
+            </Button>
           </Link>
           <Button variant="outline" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />

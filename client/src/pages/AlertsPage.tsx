@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Plus, Settings } from "lucide-react";
+import { Bell, Plus, Settings, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 export default function AlertsPage() {
   const { rules, notifications, isLoading, addRule, toggleRule, markAsRead } = useAlerts();
@@ -43,17 +44,30 @@ export default function AlertsPage() {
   };
 
   if (isLoading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Alertas Personalizadas</h1>
-        <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nueva Alerta
-        </Button>
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">Alertas Personalizadas</h1>
+        </div>
+        {!isCreating && (
+          <Button onClick={() => setIsCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Alerta
+          </Button>
+        )}
       </div>
 
       {isCreating && (
@@ -166,13 +180,13 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {rules.length === 0 ? (
+            {rules?.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">
                 No hay alertas configuradas
               </p>
             ) : (
               <div className="space-y-4">
-                {rules.map((rule) => (
+                {rules?.map((rule) => (
                   <div
                     key={rule.id}
                     className="flex items-center justify-between p-4 border rounded-lg"
@@ -187,7 +201,7 @@ export default function AlertsPage() {
                     </div>
                     <Switch
                       checked={rule.isActive}
-                      onCheckedChange={(checked) => toggleRule({ id: rule.id, isActive: checked })}
+                      onCheckedChange={() => toggleRule(rule.id)}
                     />
                   </div>
                 ))}
@@ -204,13 +218,13 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {notifications.length === 0 ? (
+            {notifications?.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">
                 No hay notificaciones nuevas
               </p>
             ) : (
               <div className="space-y-4">
-                {notifications.map((notification) => (
+                {notifications?.map((notification) => (
                   <div
                     key={notification.id}
                     className={`p-4 border rounded-lg ${
@@ -219,11 +233,6 @@ export default function AlertsPage() {
                     onClick={() => !notification.isRead && markAsRead(notification.id)}
                   >
                     <p className="font-medium">{notification.message}</p>
-                    {notification.details && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {notification.details}
-                      </p>
-                    )}
                     <p className="text-xs text-muted-foreground mt-2">
                       {new Date(notification.createdAt).toLocaleString()}
                     </p>

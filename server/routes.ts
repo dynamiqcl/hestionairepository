@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { receipts, insertReceiptSchema } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
 // Middleware to ensure user is authenticated
@@ -73,6 +73,79 @@ export function registerRoutes(app: Express): Server {
         error: "Error al agregar la boleta",
         details: error instanceof Error ? error.message : "Error desconocido"
       });
+    }
+  });
+
+  // Update existing receipt
+  app.put("/api/receipts/:id", ensureAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertReceiptSchema.partial().safeParse(req.body);
+
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Datos de boleta inválidos",
+          details: result.error.issues.map(i => i.message).join(", ")
+        });
+      }
+
+      // Verify receipt belongs to user
+      const [existingReceipt] = await db
+        .select()
+        .from(receipts)
+        .where(and(
+          eq(receipts.id, parseInt(id)),
+          eq(receipts.userId, req.user!.id)
+        ))
+        .limit(1);
+
+      if (!existingReceipt) {
+        return res.status(404).json({ error: "Boleta no encontrada" });
+      }
+
+      const [updatedReceipt] = await db
+        .update(receipts)
+        .set({
+          ...result.data,
+          updatedAt: new Date(),
+        })
+        .where(eq(receipts.id, parseInt(id)))
+        .returning();
+
+      res.json(updatedReceipt);
+    } catch (error) {
+      console.error("Error al actualizar la boleta:", error);
+      res.status(500).json({ error: "Error al actualizar la boleta" });
+    }
+  });
+
+  // Delete receipt
+  app.delete("/api/receipts/:id", ensureAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verify receipt belongs to user
+      const [existingReceipt] = await db
+        .select()
+        .from(receipts)
+        .where(and(
+          eq(receipts.id, parseInt(id)),
+          eq(receipts.userId, req.user!.id)
+        ))
+        .limit(1);
+
+      if (!existingReceipt) {
+        return res.status(404).json({ error: "Boleta no encontrada" });
+      }
+
+      await db
+        .delete(receipts)
+        .where(eq(receipts.id, parseInt(id)));
+
+      res.json({ message: "Boleta eliminada correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar la boleta:", error);
+      res.status(500).json({ error: "Error al eliminar la boleta" });
     }
   });
 

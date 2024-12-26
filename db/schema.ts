@@ -57,6 +57,32 @@ export const bankTransactions = pgTable("bank_transactions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Nueva tabla para alertas personalizadas
+export const alertRules = pgTable("alert_rules", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id").references(() => users.id),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // "AMOUNT", "CATEGORY", "FREQUENCY"
+  threshold: numeric("threshold", { precision: 10, scale: 0 }).notNull(),
+  category: text("category"),
+  timeframe: text("timeframe").notNull(), // "DAILY", "WEEKLY", "MONTHLY"
+  isActive: boolean("is_active").default(true),
+  lastTriggered: timestamp("last_triggered"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Nueva tabla para notificaciones de alertas
+export const alertNotifications = pgTable("alert_notifications", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id").references(() => users.id),
+  ruleId: serial("rule_id").references(() => alertRules.id),
+  message: text("message").notNull(),
+  details: text("details"),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Schemas base
 const baseInsertSchema = createInsertSchema(receipts);
 const baseSelectSchema = createSelectSchema(receipts);
@@ -66,6 +92,13 @@ const baseBankAccountInsertSchema = createInsertSchema(bankAccounts);
 const baseBankAccountSelectSchema = createSelectSchema(bankAccounts);
 const baseBankTransactionInsertSchema = createInsertSchema(bankTransactions);
 const baseBankTransactionSelectSchema = createSelectSchema(bankTransactions);
+
+// Schemas para alertas
+const baseAlertRuleInsertSchema = createInsertSchema(alertRules);
+const baseAlertRuleSelectSchema = createSelectSchema(alertRules);
+const baseAlertNotificationInsertSchema = createInsertSchema(alertNotifications);
+const baseAlertNotificationSelectSchema = createSelectSchema(alertNotifications);
+
 
 // Schema extendido para inserción de recibos
 export const insertReceiptSchema = baseInsertSchema.extend({
@@ -112,11 +145,27 @@ export const insertBankTransactionSchema = baseBankTransactionInsertSchema.exten
   status: z.enum(["PENDING", "MATCHED", "PROCESSED"]).default("PENDING"),
 });
 
+// Schemas para alertas
+export const insertAlertRuleSchema = baseAlertRuleInsertSchema.extend({
+  type: z.enum(["AMOUNT", "CATEGORY", "FREQUENCY"]),
+  threshold: z.number().min(0),
+  category: z.string().optional(),
+  timeframe: z.enum(["DAILY", "WEEKLY", "MONTHLY"]),
+});
+
+export const insertAlertNotificationSchema = baseAlertNotificationInsertSchema.extend({
+  message: z.string().min(1),
+  details: z.string().optional(),
+});
+
+
 // Schemas de selección
 export const selectReceiptSchema = baseSelectSchema;
 export const selectUserSchema = baseUserSelectSchema;
 export const selectBankAccountSchema = baseBankAccountSelectSchema;
 export const selectBankTransactionSchema = baseBankTransactionSelectSchema;
+export const selectAlertRuleSchema = baseAlertRuleSelectSchema;
+export const selectAlertNotificationSchema = baseAlertNotificationSelectSchema;
 
 // Types
 export type Receipt = typeof receipts.$inferSelect;
@@ -127,3 +176,7 @@ export type BankAccount = typeof bankAccounts.$inferSelect;
 export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
 export type BankTransaction = typeof bankTransactions.$inferSelect;
 export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+export type AlertRule = typeof alertRules.$inferSelect;
+export type InsertAlertRule = z.infer<typeof insertAlertRuleSchema>;
+export type AlertNotification = typeof alertNotifications.$inferSelect;
+export type InsertAlertNotification = z.infer<typeof insertAlertNotificationSchema>;

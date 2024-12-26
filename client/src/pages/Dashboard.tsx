@@ -119,14 +119,14 @@ export default function Dashboard() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="container mx-auto p-4 md:p-6"
     >
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
-          <motion.h1 
+          <motion.h1
             initial={{ x: -20 }}
             animate={{ x: 0 }}
             className="text-2xl md:text-4xl font-bold"
@@ -256,7 +256,16 @@ export default function Dashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setEditingReceipt(receipt)}
+                                  onClick={() => {
+                                    // Asegurarse de que todos los campos estén correctamente formateados
+                                    const receiptToSet = {
+                                      ...receipt,
+                                      date: new Date(receipt.date),
+                                      total: Number(receipt.total),
+                                      taxAmount: receipt.taxAmount ? Number(receipt.taxAmount) : Math.round(Number(receipt.total) * 0.19)
+                                    };
+                                    setEditingReceipt(receiptToSet);
+                                  }}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -274,7 +283,7 @@ export default function Dashboard() {
                                     <Input
                                       id="date"
                                       type="date"
-                                      value={format(new Date(editingReceipt?.date || ''), 'yyyy-MM-dd')}
+                                      value={format(new Date(editingReceipt?.date || Date.now()), 'yyyy-MM-dd')}
                                       onChange={(e) => setEditingReceipt({
                                         ...editingReceipt,
                                         date: new Date(e.target.value)

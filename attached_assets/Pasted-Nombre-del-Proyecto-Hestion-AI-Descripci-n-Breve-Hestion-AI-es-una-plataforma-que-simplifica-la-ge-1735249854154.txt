@@ -1,0 +1,43 @@
+Nombre del Proyecto: Hestion AI
+Descripción Breve:
+Hestion AI es una plataforma que simplifica la gestión financiera de boletas mediante el uso de inteligencia artificial, permitiendo a los usuarios cargar boletas en formato PDF o fotos y procesarlas automáticamente para extraer datos clave.
+Objetivo del Proyecto:
+Crear una herramienta integrada con IA que facilite a las empresas y profesionales independientes la digitalización y organización de sus boletas, permitiendo una experiencia rápida y eficiente.
+Funcionalidades Requeridas:
+Subida de Boletas:
+Permitir a los usuarios cargar imágenes (JPG, PNG) o archivos PDF directamente a la plataforma.
+Procesamiento de Imágenes con OCR:
+Utilizar un servicio de OCR como Tesseract, Google Vision API, o similar para extraer texto de las imágenes cargadas.
+Reconocer campos clave como:
+Fecha de emisión.
+Monto total.
+Impuestos (si corresponde).
+Categoría de gasto.
+Análisis y Clasificación con IA:
+Implementar un modelo de IA para analizar los datos extraídos y asignar automáticamente categorías sugeridas.
+Validar y estructurar los datos antes de ingresarlos en la base de datos.
+Interfaz de Usuario:
+Una interfaz simple donde los usuarios puedan:
+Visualizar las boletas subidas.
+Editar los datos extraídos si es necesario.
+Consultar reportes financieros generados automáticamente.
+Base de Datos:
+Configuración para almacenar los datos extraídos de las boletas en MongoDB, estructurados en colecciones que incluyan:
+Información básica de la boleta.
+Categoría asignada.
+Usuario al que pertenece.
+Tecnología Utilizada:
+Frontend: React.js (diseño interactivo y responsivo).
+Backend: Node.js con Express para la lógica de negocio.
+OCR: Tesseract OCR o Google Vision API para reconocimiento óptico de caracteres.
+Base de Datos: MongoDB para el almacenamiento de boletas y datos procesados.
+Despliegue: Vercel, para una integración rápida y eficiente del proyecto.
+Casos de Uso Principales:
+Un usuario sube una foto de una boleta desde su celular.
+El sistema extrae automáticamente los datos clave con OCR.
+La IA clasifica la boleta en la categoría correspondiente y almacena los datos en MongoDB.
+El usuario recibe un resumen del gasto y la posibilidad de modificarlo si es necesario.
+Resultados Esperados:
+Reducción del tiempo requerido para organizar boletas.
+Incremento en la precisión del análisis financiero gracias al uso de IA.
+Mejor experiencia del usuario mediante un flujo automatizado y editable.

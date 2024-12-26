@@ -6,39 +6,74 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Upload, Camera } from "lucide-react";
+import { Loader2, Camera, AlertCircle, CheckCircle2 } from "lucide-react";
 import Tesseract from 'tesseract.js';
 import { categorizeReceipt } from "@/lib/categorize";
+
+interface ValidationResult {
+  isValid: boolean;
+  validationIssues: string[];
+  confidence: {
+    overall: number;
+    category: number;
+    amount: number;
+    date: number;
+    vendor: number;
+  };
+}
 
 export default function ReceiptUpload() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { addReceipt } = useReceipts();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Mostrar preview de la imagen
+    setPreview(URL.createObjectURL(file));
     setIsProcessing(true);
+    setValidation(null);
+
     try {
       toast({
         title: "Procesando",
         description: "Analizando la imagen de la boleta...",
       });
 
-      // Process image with Tesseract OCR
+      // Procesar imagen con Tesseract OCR
       const result = await Tesseract.recognize(file, 'spa', {
         logger: m => console.log(m)
       });
+
       console.log('Texto extraído:', result.data.text);
       const text = result.data.text;
 
-      // Extract receipt data using AI categorization
+      // Extraer y validar datos
       const receiptData = categorizeReceipt(text);
       console.log('Datos procesados:', receiptData);
 
-      // Create object URL for the image
+      // Actualizar estado de validación
+      setValidation({
+        isValid: receiptData.isValid,
+        validationIssues: receiptData.validationIssues,
+        confidence: receiptData.confidence
+      });
+
+      if (!receiptData.isValid) {
+        toast({
+          title: "Advertencia",
+          description: "La boleta podría no ser válida. Por favor, verifica los datos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Crear URL para la imagen
       const imageUrl = URL.createObjectURL(file);
 
       const receiptToSave = {
@@ -87,14 +122,22 @@ export default function ReceiptUpload() {
                 <div className="flex items-center justify-center w-full">
                   <label
                     htmlFor="receipt"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 relative overflow-hidden"
                   >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        Toca para tomar una foto o seleccionar una imagen
-                      </p>
-                    </div>
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Toca para tomar una foto o seleccionar una imagen
+                        </p>
+                      </div>
+                    )}
                     <Input
                       id="receipt"
                       type="file"
@@ -108,6 +151,46 @@ export default function ReceiptUpload() {
                 </div>
               </div>
             </div>
+
+            {validation && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {validation.isValid ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-yellow-500" />
+                  )}
+                  <span className="font-medium">
+                    {validation.isValid ? 'Boleta Válida' : 'Validación Pendiente'}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-sm">
+                  <p className="text-muted-foreground">
+                    Confianza de detección:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>Categoría: {Math.round(validation.confidence.category * 100)}%</div>
+                    <div>Monto: {Math.round(validation.confidence.amount * 100)}%</div>
+                    <div>Fecha: {Math.round(validation.confidence.date * 100)}%</div>
+                    <div>Vendedor: {Math.round(validation.confidence.vendor * 100)}%</div>
+                  </div>
+                </div>
+
+                {validation.validationIssues.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-medium text-yellow-600">
+                      Problemas detectados:
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {validation.validationIssues.map((issue, index) => (
+                        <li key={index}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             {isProcessing && (
               <div className="flex items-center justify-center p-4">

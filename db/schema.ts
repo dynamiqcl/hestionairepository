@@ -14,11 +14,12 @@ export const users = pgTable("users", {
 export const receipts = pgTable("receipts", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
+  receiptId: text("receipt_id").notNull().unique(), // ID único para cada boleta
   date: timestamp("date").notNull(),
-  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  total: numeric("total", { precision: 10, scale: 0 }).notNull(), // Sin decimales para CLP
   vendor: text("vendor"),
   category: text("category"),
-  taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }),
+  taxAmount: numeric("tax_amount", { precision: 10, scale: 0 }), // Sin decimales para CLP
   rawText: text("raw_text"),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -35,15 +36,19 @@ const baseUserSelectSchema = createSelectSchema(users);
 export const insertReceiptSchema = baseInsertSchema.extend({
   date: z.coerce.date(),
   total: z.string().or(z.number()).transform(val => 
-    typeof val === 'string' ? parseFloat(val) : val
+    typeof val === 'string' ? Math.round(parseFloat(val)) : Math.round(val)
   ),
   vendor: z.string().optional(),
   category: z.string().optional(),
   taxAmount: z.string().or(z.number()).transform(val => 
-    typeof val === 'string' ? parseFloat(val) : val
+    typeof val === 'string' ? Math.round(parseFloat(val)) : Math.round(val)
   ).optional(),
   rawText: z.string().optional(),
   imageUrl: z.string().optional(),
+  receiptId: z.string().default(() => {
+    const date = new Date();
+    return `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+  }),
 });
 
 export const insertUserSchema = baseUserInsertSchema.extend({

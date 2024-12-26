@@ -28,7 +28,7 @@ function validateReceipt(text: string): { isValid: boolean; confidence: number; 
     confidence *= 0.7;
   }
 
-  if (!text.match(/\$?\s*\d+([.,]\d{2})?/)) {
+  if (!text.match(/\$?\s*\d{1,3}(?:\.\d{3})*(?:\,[0-9]{2})?/)) {
     issues.push("No se encontró un monto válido");
     confidence *= 0.7;
   }
@@ -102,18 +102,19 @@ function categorizeByKeywords(text: string): { category: string; confidence: num
   };
 }
 
-// Extraer monto del texto
+// Extraer monto del texto en CLP
 function extractAmount(text: string): { amount: number; confidence: number } {
   const patterns = [
-    /\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,  // formato $1,234.56
-    /total:?\s*\$?\s*(\d+(?:\.\d{2})?)/i,      // "Total: $123.45"
-    /\$\s*(\d+(?:\.\d{2})?)/,                  // "$123.45"
+    /\$?\s*(\d{1,3}(?:\.\d{3})*(?:\,[0-9]{2})?)/,  // formato $1.234,56 o $1.234
+    /total:?\s*\$?\s*(\d{1,3}(?:\.\d{3})*)/i,      // "Total: $123.456"
+    /\$\s*(\d{1,3}(?:\.\d{3})*)/,                  // "$123.456"
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      const amount = parseFloat(match[1].replace(/,/g, ''));
+      // Convertir formato CLP a número
+      const amount = parseInt(match[1].replace(/\./g, '').replace(',', ''));
       return {
         amount,
         confidence: 0.9  // Alta confianza para matches exactos
@@ -122,10 +123,10 @@ function extractAmount(text: string): { amount: number; confidence: number } {
   }
 
   // Búsqueda más flexible de números
-  const numberMatch = text.match(/(\d+(?:\.\d{2})?)/);
+  const numberMatch = text.match(/(\d+)/);
   if (numberMatch) {
     return {
-      amount: parseFloat(numberMatch[1]),
+      amount: parseInt(numberMatch[1]),
       confidence: 0.6  // Menor confianza para matches parciales
     };
   }
@@ -166,7 +167,7 @@ function extractVendor(text: string): { vendor: string; confidence: number } {
     if (
       trimmedLine &&
       !trimmedLine.match(/(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/) &&
-      !trimmedLine.match(/\$?\s*\d+\.\d{2}/) &&
+      !trimmedLine.match(/\$?\s*\d{1,3}(?:\.\d{3})*/) &&
       trimmedLine.length > 3
     ) {
       return {
@@ -203,6 +204,6 @@ export function categorizeReceipt(text: string) {
     total: amountInfo.amount,
     vendor: vendorInfo.vendor,
     category: categorization.category,
-    taxAmount: amountInfo.amount * 0.19, // IVA estándar en Chile
+    taxAmount: Math.round(amountInfo.amount * 0.19), // IVA estándar en Chile
   };
 }

@@ -53,7 +53,6 @@ export function registerRoutes(app: Express): Server {
         ...result.data,
         userId: req.user!.id,
         receiptId,
-        // Ensure numeric fields are properly formatted
         total: parseFloat(result.data.total.toString()),
         taxAmount: result.data.taxAmount ? parseFloat(result.data.taxAmount.toString()) : null,
       };
@@ -119,37 +118,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Delete receipt
-  app.delete("/api/receipts/:id", ensureAuth, async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      // Verify receipt belongs to user
-      const [existingReceipt] = await db
-        .select()
-        .from(receipts)
-        .where(and(
-          eq(receipts.id, parseInt(id)),
-          eq(receipts.userId, req.user!.id)
-        ))
-        .limit(1);
-
-      if (!existingReceipt) {
-        return res.status(404).json({ error: "Boleta no encontrada" });
-      }
-
-      await db
-        .delete(receipts)
-        .where(eq(receipts.id, parseInt(id)));
-
-      res.json({ message: "Boleta eliminada correctamente" });
-    } catch (error) {
-      console.error("Error al eliminar la boleta:", error);
-      res.status(500).json({ error: "Error al eliminar la boleta" });
-    }
-  });
-
-  // Rutas para alertas
+  // Get all alert rules for the logged in user
   app.get("/api/alerts/rules", ensureAuth, async (req, res) => {
     try {
       const rules = await db
@@ -164,6 +133,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add new alert rule
   app.post("/api/alerts/rules", ensureAuth, async (req, res) => {
     try {
       const result = insertAlertRuleSchema.safeParse(req.body);
@@ -189,9 +159,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update alert rule status
   app.put("/api/alerts/rules/:id", ensureAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ error: "ID de regla inválido" });
+      }
+
+      // Verify rule belongs to user and exists
       const [existingRule] = await db
         .select()
         .from(alertRules)
@@ -205,11 +181,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Regla no encontrada" });
       }
 
+      // Toggle the isActive status
       const [updatedRule] = await db
         .update(alertRules)
         .set({
-          ...req.body,
-          updatedAt: new Date(),
+          isActive: !existingRule.isActive,
+          updatedAt: new Date()
         })
         .where(eq(alertRules.id, parseInt(id)))
         .returning();
@@ -221,6 +198,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get notifications for the logged in user
   app.get("/api/alerts/notifications", ensureAuth, async (req, res) => {
     try {
       const notifications = await db
@@ -235,9 +213,14 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Mark notification as read
   app.put("/api/alerts/notifications/:id", ensureAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ error: "ID de notificación inválido" });
+      }
+
       const [notification] = await db
         .select()
         .from(alertNotifications)
@@ -253,10 +236,7 @@ export function registerRoutes(app: Express): Server {
 
       const [updatedNotification] = await db
         .update(alertNotifications)
-        .set({
-          isRead: true,
-          updatedAt: new Date(),
-        })
+        .set({ isRead: true })
         .where(eq(alertNotifications.id, parseInt(id)))
         .returning();
 

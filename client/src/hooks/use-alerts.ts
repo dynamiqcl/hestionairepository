@@ -35,13 +35,12 @@ export function useAlerts() {
   };
 
   // Activar/desactivar regla
-  const toggleRule = async (id: number, isActive: boolean) => {
+  const toggleRule = async (id: number) => {
     const response = await fetch(`/api/alerts/rules/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ isActive }),
       credentials: 'include',
     });
 
@@ -89,8 +88,7 @@ export function useAlerts() {
   });
 
   const toggleRuleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
-      toggleRule(id, isActive),
+    mutationFn: toggleRule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/rules'] });
       toast({

@@ -102,16 +102,16 @@ export default function Dashboard() {
           <h1 className="text-2xl md:text-4xl font-bold">Panel de Rendiciones</h1>
           <p className="text-muted-foreground">Bienvenido, {user?.nombreCompleto || user?.username}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="hidden md:flex md:items-center md:space-x-4">
           <Link href="/upload">
-            <Button>
+            <Button variant="ghost">
               <Receipt className="w-4 h-4 mr-2" />
               Subir Boleta
             </Button>
           </Link>
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="ghost">
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Empresa
               </Button>
@@ -149,17 +149,14 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
           {isAdmin && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Link href="/tables" className="flex items-center">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Mantenedores
-                </Link>
-              </DropdownMenuTrigger>
-              {/* Removed Categories DropdownMenuItem */}
-            </DropdownMenu>
+            <Link href="/tables">
+              <Button variant="ghost">
+                <Settings className="w-4 h-4 mr-2" />
+                Mantenedores
+              </Button>
+            </Link>
           )}
-          <Button variant="outline" onClick={() => logout()}>
+          <Button variant="ghost" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Salir
           </Button>

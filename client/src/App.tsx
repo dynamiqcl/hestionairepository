@@ -32,7 +32,7 @@ function AppContent() {
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={ReceiptUpload} />
         <Route path="/alerts" component={AlertsPage} />
-        <Route path="/categories" component={CategoryManager} />
+        
         <Route path="/tables" component={TablesViewer} />
       </Switch>
     </div>

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
 
 interface ValidationResult {
   isValid: boolean;
@@ -65,8 +66,9 @@ export default function ReceiptUpload() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-  const [editedData, setEditedData] = useState<ExtractedData | null>(null);
+  const [editedData, setEditedData] = useState<ExtractedData & { companyId?: number } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const { data: companies } = useCompanies();
 
   const startCamera = async () => {
     try {
@@ -176,7 +178,7 @@ export default function ReceiptUpload() {
       };
 
       setExtractedData(extractedFields);
-      setEditedData(extractedFields);
+      setEditedData({...extractedFields});
       setIsEditing(true);
 
       if (!receiptData.isValid) {
@@ -324,14 +326,14 @@ export default function ReceiptUpload() {
                     value={editedData.companyId?.toString()}
                     onValueChange={(value) => setEditedData({
                       ...editedData,
-                      companyId: parseInt(value)
+                      companyId: parseInt(value, 10)
                     })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona una empresa" />
                     </SelectTrigger>
                     <SelectContent>
-                      {companies?.data?.map((company) => (
+                      {companies?.map((company) => (
                         <SelectItem key={company.id} value={company.id.toString()}>
                           {company.name}
                         </SelectItem>
@@ -375,8 +377,8 @@ export default function ReceiptUpload() {
                     value={editedData.total}
                     onChange={(e) => setEditedData({
                       ...editedData,
-                      total: parseInt(e.target.value),
-                      taxAmount: Math.round(parseInt(e.target.value) * 0.19)
+                      total: parseInt(e.target.value, 10),
+                      taxAmount: Math.round(parseInt(e.target.value, 10) * 0.19)
                     })}
                   />
                 </div>

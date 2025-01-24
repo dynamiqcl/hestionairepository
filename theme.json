@@ -1,6 +1,14 @@
+
 {
   "variant": "professional",
-  "primary": "hsl(222.2 47.4% 11.2%)",
   "appearance": "light",
-  "radius": 0.5
+  "radius": 0.5,
+  "colors": {
+    "primary": "#223549",
+    "secondary": "#807D50",
+    "background": "#E0DECF",
+    "foreground": "#223549",
+    "muted": "#92A47A",
+    "accent": "#7897AB"
+  }
 }

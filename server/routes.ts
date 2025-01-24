@@ -53,7 +53,20 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {
       const userReceipts = await db
-        .select()
+        .select({
+          id: receipts.id,
+          userId: receipts.userId,
+          receiptId: receipts.receiptId,
+          date: receipts.date,
+          total: receipts.total,
+          vendor: receipts.vendor,
+          category: receipts.category,
+          taxAmount: receipts.taxAmount,
+          rawText: receipts.rawText,
+          imageUrl: receipts.imageUrl,
+          createdAt: receipts.createdAt,
+          updatedAt: receipts.updatedAt,
+        })
         .from(receipts)
         .where(eq(receipts.userId, req.user!.id))
         .orderBy(desc(receipts.date));

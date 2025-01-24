@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 // Función para formatear montos en CLP
 const formatCLP = (amount: number) => {
@@ -70,6 +71,8 @@ export default function Dashboard() {
         description: "Empresa creada correctamente",
       });
 
+      // Invalidar la cache para recargar las empresas
+      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
       setNewCompany({ name: "", rut: "" });
     } catch (error) {
       console.error('Error al crear empresa:', error);

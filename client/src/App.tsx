@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
+import CategoryManager from "@/pages/CategoryManager";
+import TablesViewer from "@/pages/TablesViewer";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -30,6 +32,8 @@ function AppContent() {
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={ReceiptUpload} />
         <Route path="/alerts" component={AlertsPage} />
+        <Route path="/categories" component={CategoryManager} />
+        <Route path="/tables" component={TablesViewer} />
       </Switch>
     </div>
   );

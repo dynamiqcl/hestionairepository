@@ -41,7 +41,16 @@ interface ExtractedData {
   taxAmount: number;
 }
 
-const categories = ['Alimentación', 'Transporte', 'Oficina', 'Otros'];
+function useCategories() {
+  return useQuery<{ id: number, name: string }[]>({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Error al obtener categorías');
+      return response.json();
+    }
+  });
+}
 
 function useCompanies() {
   return useQuery<{ id: number, name: string }[]>({
@@ -69,6 +78,7 @@ export default function ReceiptUpload() {
   const [editedData, setEditedData] = useState<ExtractedData & { companyId?: number } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { data: companies } = useCompanies();
+  const { data } = useCategories();
 
   const startCamera = async () => {
     try {
@@ -422,9 +432,9 @@ export default function ReceiptUpload() {
                       <SelectValue placeholder="Selecciona una categoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {data?.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

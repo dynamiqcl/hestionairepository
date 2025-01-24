@@ -14,7 +14,7 @@ export const users = pgTable("users", {
 export const receipts = pgTable("receipts", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
-  companyId: serial("company_id").references(() => companies.id),
+  companyId: serial("company_id").references(() => companies.id).notNull().default(1),
   receiptId: text("receipt_id").notNull().unique(),
   date: timestamp("date").notNull(),
   total: numeric("total", { precision: 10, scale: 0 }).notNull(),

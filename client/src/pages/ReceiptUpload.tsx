@@ -216,6 +216,7 @@ export default function ReceiptUpload() {
     try {
       const receiptToSave = {
         ...editedData,
+        date: new Date(editedData.date).toISOString(),
         rawText: extractedData?.vendor || "",
         imageUrl: preview
       };

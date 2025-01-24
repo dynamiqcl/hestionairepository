@@ -9,6 +9,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import CategoryManager from "./pages/CategoryManager";
 import TablesViewer from "@/pages/TablesViewer";
+import CompanyManager from "@/pages/CompanyManager";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -32,6 +33,7 @@ function AppContent() {
         <Route path="/upload" component={ReceiptUpload} />
         <Route path="/categories" component={CategoryManager} />
         <Route path="/tables" component={TablesViewer} />
+        <Route path="/companies" component={CompanyManager} />
       </Switch>
     </div>
   );

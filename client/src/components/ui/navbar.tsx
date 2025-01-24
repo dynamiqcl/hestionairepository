@@ -35,6 +35,9 @@ export function Navbar() {
             <Link href="/upload">
               <Button variant="ghost">Subir Boleta</Button>
             </Link>
+            <Link href="/companies">
+              <Button variant="ghost">Empresas</Button>
+            </Link>
             <Link href="/tables">
               <Button variant="ghost">Mantenedores</Button>
             </Link>

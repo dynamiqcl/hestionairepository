@@ -289,6 +289,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/receipts/:id", ensureAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db
+        .delete(receipts)
+        .where(eq(receipts.id, parseInt(id)));
+      res.json({ success: true, message: "Boleta eliminada correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar la boleta:", error);
+      res.status(500).json({ success: false, error: "Error al eliminar la boleta" });
+    }
+  });
+
+
   const httpServer = createServer(app);
   return httpServer;
 }

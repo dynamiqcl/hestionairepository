@@ -148,12 +148,6 @@ export default function Dashboard() {
               </form>
             </DialogContent>
           </Dialog>
-          <Link href="/alerts">
-            <Button variant="outline">
-              <Bell className="w-4 h-4 mr-2" />
-              Alertas
-            </Button>
-          </Link>
           {isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

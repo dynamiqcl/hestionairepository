@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus } from "lucide-react";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SlidersHorizontal } from "lucide-react";
+
 
 // Función para formatear montos en CLP
 const formatCLP = (amount: number) => {
@@ -148,12 +156,22 @@ export default function Dashboard() {
             </Button>
           </Link>
           {isAdmin && (
-            <Link href="/categories">
-              <Button variant="outline">
-                <Pencil className="w-4 h-4 mr-2" />
-                Categorías
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Mantenedores
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem>
+                  <Link href="/categories">
+                    <SlidersHorizontal className="w-4 h-4 mr-2" />
+                    Categorías
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <Button variant="outline" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />

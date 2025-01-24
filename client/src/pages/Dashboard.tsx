@@ -278,6 +278,7 @@ export default function Dashboard() {
                   <tr className="border-b bg-muted/50">
                     <th className="p-4 text-left">ID</th>
                     <th className="p-4 text-left">Fecha</th>
+                    <th className="p-4 text-left">Empresa</th>
                     <th className="p-4 text-left">Proveedor</th>
                     <th className="p-4 text-left">Categoría</th>
                     <th className="p-4 text-right">Monto</th>
@@ -296,6 +297,7 @@ export default function Dashboard() {
                       >
                         <td className="p-4">{receipt.receiptId}</td>
                         <td className="p-4">{new Date(receipt.date).toLocaleDateString('es-ES')}</td>
+                        <td className="p-4">{receipt.companyName || 'Sin empresa'}</td>
                         <td className="p-4">{receipt.vendor}</td>
                         <td className="p-4">{receipt.category}</td>
                         <td className="p-4 text-right">{formatCLP(Number(receipt.total))}</td>

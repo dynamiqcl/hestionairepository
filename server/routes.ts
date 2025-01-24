@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema } from "@db/schema";
+import { receipts, companies, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema } from "@db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -66,8 +66,10 @@ export function registerRoutes(app: Express): Server {
           imageUrl: receipts.imageUrl,
           createdAt: receipts.createdAt,
           updatedAt: receipts.updatedAt,
+          companyName: companies.name,
         })
         .from(receipts)
+        .leftJoin(companies, eq(receipts.companyId, companies.id))
         .where(eq(receipts.userId, req.user!.id))
         .orderBy(desc(receipts.date));
       res.json(userReceipts);

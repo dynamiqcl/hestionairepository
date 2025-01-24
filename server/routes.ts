@@ -20,12 +20,12 @@ export function registerRoutes(app: Express): Server {
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      const allReceipts = await db
+      const userReceipts = await db
         .select()
         .from(receipts)
         .where(eq(receipts.userId, req.user!.id))
         .orderBy(desc(receipts.date));
-      res.json(allReceipts);
+      res.json(userReceipts);
     } catch (error) {
       console.error("Error al obtener las boletas:", error);
       res.status(500).json({ error: "Error al obtener las boletas" });
@@ -86,6 +86,20 @@ export function registerRoutes(app: Express): Server {
           error: "Datos de boleta inválidos",
           details: result.error.issues.map(i => i.message).join(", ")
         });
+      }
+
+      // Verify receipt belongs to user
+      const [existingReceipt] = await db
+        .select()
+        .from(receipts)
+        .where(and(
+          eq(receipts.id, parseInt(id)),
+          eq(receipts.userId, req.user!.id)
+        ))
+        .limit(1);
+
+      if (!existingReceipt) {
+        return res.status(404).json({ error: "Boleta no encontrada" });
       }
 
       // Verify receipt belongs to user

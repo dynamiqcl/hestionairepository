@@ -124,5 +124,7 @@ export function useAuth() {
     login: loginMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     register: registerMutation.mutateAsync,
+    isAdmin: user?.role === 'ADMINISTRADOR',
+    isConsultor: user?.role === 'CONSULTOR',
   };
 }

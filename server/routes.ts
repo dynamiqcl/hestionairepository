@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema } from "@db/schema";
+import { receipts, companies, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema, users, UserRole } from "@db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -13,9 +13,84 @@ const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.N
   res.status(401).send("No has iniciado sesión");
 };
 
+// Middleware para verificar rol de administrador
+const ensureAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  if (req.user?.role !== UserRole.ADMINISTRADOR) {
+    return res.status(403).send("Acceso no autorizado");
+  }
+  next();
+};
+
+// Middleware para verificar rol de consultor o superior
+const ensureConsultorOrAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  if (req.user?.role !== UserRole.CONSULTOR && req.user?.role !== UserRole.ADMINISTRADOR) {
+    return res.status(403).send("Acceso no autorizado");
+  }
+  next();
+};
+
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes
   setupAuth(app);
+
+  // Actualizar rol de administrador
+  app.post("/api/admin/init", async (req, res) => {
+    try {
+      await db
+        .update(users)
+        .set({ role: UserRole.ADMINISTRADOR })
+        .where(eq(users.username, "management@hestion.cl"));
+
+      res.json({ message: "Rol de administrador asignado correctamente" });
+    } catch (error) {
+      console.error("Error al asignar rol de administrador:", error);
+      res.status(500).json({ error: "Error al asignar rol de administrador" });
+    }
+  });
+
+  // Ruta para que el administrador actualice roles de usuarios
+  app.put("/api/users/:id/role", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+
+      if (!Object.values(UserRole).includes(role)) {
+        return res.status(400).json({ error: "Rol inválido" });
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ role })
+        .where(eq(users.id, parseInt(id, 10)))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error al actualizar rol:", error);
+      res.status(500).json({ error: "Error al actualizar rol" });
+    }
+  });
+
+  // Obtener lista de usuarios (solo admin)
+  app.get("/api/users", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const userList = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          nombreCompleto: users.nombreCompleto,
+          role: users.role,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt));
+
+      res.json(userList);
+    } catch (error) {
+      console.error("Error al obtener usuarios:", error);
+      res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+  });
 
   // Rutas de empresas
   app.get("/api/companies", ensureAuth, async (req, res) => {
@@ -81,11 +156,8 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      console.log("Datos recibidos:", req.body);
-
       const result = insertReceiptSchema.safeParse(req.body);
       if (!result.success) {
-        console.error("Error de validación:", result.error.issues);
         return res.status(400).json({
           error: "Datos de boleta inválidos",
           details: result.error.issues.map(i => i.message).join(", ")
@@ -95,19 +167,15 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         ...result.data,
         userId: req.user!.id,
-        companyId: result.data.companyId,
         total: parseFloat(result.data.total.toString()),
         taxAmount: result.data.taxAmount ? parseFloat(result.data.taxAmount.toString()) : null,
       };
-
-      console.log("Datos a insertar:", receiptData);
 
       const [newReceipt] = await db
         .insert(receipts)
         .values(receiptData)
         .returning();
 
-      console.log("Boleta guardada:", newReceipt);
       res.json(newReceipt);
     } catch (error) {
       console.error("Error al agregar la boleta:", error);
@@ -293,31 +361,3 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
   return httpServer;
 }
-export function registerRoutes(app: Express): Server {
-  // Setup authentication routes
-  setupAuth(app);
-
-  // Actualizar rol de administrador
-  app.post("/api/admin/init", async (req, res) => {
-    try {
-      await db
-        .update(users)
-        .set({ role: UserRole.ADMINISTRADOR })
-        .where(eq(users.username, "management@hestion.cl"));
-      
-      res.json({ message: "Rol de administrador asignado correctamente" });
-    } catch (error) {
-      console.error("Error al asignar rol de administrador:", error);
-      res.status(500).json({ error: "Error al asignar rol de administrador" });
-    }
-  });
-
-  // Middleware para verificar rol de administrador
-  const ensureAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-    if (req.user?.role !== UserRole.ADMINISTRADOR) {
-      return res.status(403).send("Acceso no autorizado");
-    }
-    next();
-  };
-
-  // Resto de las rutas...

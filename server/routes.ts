@@ -136,6 +136,7 @@ export function registerRoutes(app: Express): Server {
           total: receipts.total,
           vendor: receipts.vendor,
           categoryId: receipts.categoryId,
+          category: categories.name,
           taxAmount: receipts.taxAmount,
           rawText: receipts.rawText,
           imageUrl: receipts.imageUrl,
@@ -144,7 +145,8 @@ export function registerRoutes(app: Express): Server {
           companyName: companies.name,
         })
         .from(receipts)
-        .leftJoin(companies, eq(receipts.companyId, companies.id));
+        .leftJoin(companies, eq(receipts.companyId, companies.id))
+        .leftJoin(categories, eq(receipts.categoryId, categories.id));
 
       // Si no es admin, filtrar solo las boletas del usuario
       if (req.user?.role !== UserRole.ADMINISTRADOR) {

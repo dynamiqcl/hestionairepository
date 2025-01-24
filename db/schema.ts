@@ -8,12 +8,15 @@ export const UserRole = {
   CONSULTOR: 'CONSULTOR'
 } as const;
 
+// Tabla de categorías mejorada
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   description: text("description"),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
 });
 
 export const users = pgTable("users", {
@@ -40,11 +43,11 @@ export const receipts = pgTable("receipts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   companyId: integer("company_id").references(() => companies.id),
+  categoryId: integer("category_id").references(() => categories.id),
   receiptId: text("receipt_id").notNull().unique(),
   date: timestamp("date").notNull(),
   total: numeric("total", { precision: 10, scale: 0 }).notNull(),
   vendor: text("vendor"),
-  category: text("category"),
   taxAmount: numeric("tax_amount", { precision: 10, scale: 0 }),
   rawText: text("raw_text"),
   imageUrl: text("image_url"),
@@ -140,7 +143,6 @@ export const insertReceiptSchema = baseInsertSchema.extend({
     typeof val === 'string' ? Math.round(parseFloat(val)) : Math.round(val)
   ),
   vendor: z.string().optional(),
-  category: z.string().optional(),
   taxAmount: z.string().or(z.number()).transform(val =>
     typeof val === 'string' ? Math.round(parseFloat(val)) : Math.round(val)
   ).optional(),
@@ -194,6 +196,10 @@ export const selectBankTransactionSchema = baseBankTransactionSelectSchema;
 export const selectAlertRuleSchema = baseAlertRuleSelectSchema;
 export const selectAlertNotificationSchema = baseAlertNotificationSelectSchema;
 
+// Agregar schemas para categorías
+export const insertCategorySchema = createInsertSchema(categories);
+export const selectCategorySchema = createSelectSchema(categories);
+
 // Types
 export type Receipt = typeof receipts.$inferSelect;
 export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
@@ -207,3 +213,7 @@ export type AlertRule = typeof alertRules.$inferSelect;
 export type InsertAlertRule = z.infer<typeof insertAlertRuleSchema>;
 export type AlertNotification = typeof alertNotifications.$inferSelect;
 export type InsertAlertNotification = z.infer<typeof insertAlertNotificationSchema>;
+
+// Tipos para categorías
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;

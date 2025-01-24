@@ -378,7 +378,11 @@ export function registerRoutes(app: Express): Server {
       const { name, description } = req.body;
       const [newCategory] = await db
         .insert(categories)
-        .values({ name, description })
+        .values({ 
+          name, 
+          description,
+          createdBy: req.user!.id 
+        })
         .returning();
       res.json(newCategory);
     } catch (error) {

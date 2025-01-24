@@ -166,6 +166,7 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         ...req.body,
         userId: req.user!.id,
+        date: new Date(req.body.date),
         total: parseFloat(req.body.total.toString()),
         taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
       };

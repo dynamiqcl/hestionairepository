@@ -42,6 +42,17 @@ interface ExtractedData {
 
 const categories = ['Alimentación', 'Transporte', 'Oficina', 'Otros'];
 
+function useCompanies() {
+  return useQuery<{ id: number, name: string }[]>({
+    queryKey: ['/api/companies'],
+    queryFn: async () => {
+      const response = await fetch('/api/companies');
+      if (!response.ok) throw new Error('Error al obtener empresas');
+      return response.json();
+    }
+  });
+}
+
 export default function ReceiptUpload() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -306,6 +317,28 @@ export default function ReceiptUpload() {
             {isEditing && editedData && (
               <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
                 <h3 className="font-medium">Editar Datos Extraídos</h3>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company">Empresa</Label>
+                  <Select
+                    value={editedData.companyId?.toString()}
+                    onValueChange={(value) => setEditedData({
+                      ...editedData,
+                      companyId: parseInt(value)
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies?.data?.map((company) => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="date">

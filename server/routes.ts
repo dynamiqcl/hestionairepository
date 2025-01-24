@@ -17,6 +17,38 @@ export function registerRoutes(app: Express): Server {
   // Setup authentication routes
   setupAuth(app);
 
+  // Rutas de empresas
+  app.get("/api/companies", ensureAuth, async (req, res) => {
+    try {
+      const userCompanies = await db
+        .select()
+        .from(companies)
+        .where(eq(companies.userId, req.user!.id));
+      res.json(userCompanies);
+    } catch (error) {
+      console.error("Error al obtener empresas:", error);
+      res.status(500).json({ error: "Error al obtener empresas" });
+    }
+  });
+
+  app.post("/api/companies", ensureAuth, async (req, res) => {
+    try {
+      const { name, rut } = req.body;
+      const [newCompany] = await db
+        .insert(companies)
+        .values({
+          name,
+          rut,
+          userId: req.user!.id,
+        })
+        .returning();
+      res.json(newCompany);
+    } catch (error) {
+      console.error("Error al crear empresa:", error);
+      res.status(500).json({ error: "Error al crear empresa" });
+    }
+  });
+
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {

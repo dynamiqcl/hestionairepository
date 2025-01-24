@@ -14,6 +14,7 @@ export const users = pgTable("users", {
 export const receipts = pgTable("receipts", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
+  companyId: serial("company_id").references(() => companies.id),
   receiptId: text("receipt_id").notNull().unique(),
   date: timestamp("date").notNull(),
   total: numeric("total", { precision: 10, scale: 0 }).notNull(),
@@ -22,6 +23,17 @@ export const receipts = pgTable("receipts", {
   taxAmount: numeric("tax_amount", { precision: 10, scale: 0 }),
   rawText: text("raw_text"),
   imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tabla de empresas
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id").references(() => users.id),
+  name: text("name").notNull(),
+  rut: text("rut").notNull(),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

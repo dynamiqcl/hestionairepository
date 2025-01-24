@@ -167,7 +167,11 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Inicio de sesión exitoso",
-          user: { id: user.id, username: user.username },
+          user: { 
+            id: user.id, 
+            username: user.username,
+            role: user.role 
+          },
         });
       });
     };

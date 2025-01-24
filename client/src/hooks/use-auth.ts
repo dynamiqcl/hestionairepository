@@ -4,7 +4,7 @@ import { useToast } from "./use-toast";
 
 type RequestResult = {
   ok: true;
-  user: User;
+  user: User & { role?: string };
 } | {
   ok: false;
   message: string;

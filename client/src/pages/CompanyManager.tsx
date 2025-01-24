@@ -1,4 +1,5 @@
 
+import { Navbar } from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -94,7 +95,9 @@ export default function CompanyManager() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <>
+      <Navbar />
+      <div className="container mx-auto p-4 space-y-6 mt-20">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
@@ -242,5 +245,6 @@ export default function CompanyManager() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

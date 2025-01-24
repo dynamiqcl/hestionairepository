@@ -72,6 +72,11 @@ export function Navbar() {
                 Mantenedores
               </Button>
             </Link>
+            <Link href="/companies" onClick={() => setIsMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                Empresas
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

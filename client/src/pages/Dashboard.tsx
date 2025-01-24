@@ -35,7 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SlidersHorizontal } from "lucide-react";
 
 
 // Función para formatear montos en CLP
@@ -158,19 +157,12 @@ export default function Dashboard() {
           {isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Link href="/tables" className="flex items-center">
                   <Settings className="w-4 h-4 mr-2" />
                   Mantenedores
-                </Button>
+                </Link>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>
-                  <Link href="/categories">
-                    <SlidersHorizontal className="w-4 h-4 mr-2" />
-                    Categorías
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+              {/* Removed Categories DropdownMenuItem */}
             </DropdownMenu>
           )}
           <Button variant="outline" onClick={() => logout()}>

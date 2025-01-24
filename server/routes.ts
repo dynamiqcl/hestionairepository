@@ -144,11 +144,8 @@ export function registerRoutes(app: Express): Server {
           companyName: companies.name,
         })
         .from(receipts)
-        .leftJoin(companies, and(
-          eq(receipts.companyId, companies.id),
-          eq(companies.userId, req.user!.id)
-        ))
-        .where(eq(receipts.userId, req.user!.id))
+        .leftJoin(companies, eq(receipts.companyId, companies.id))
+        .where(eq(companies.userId, req.user!.id))
         .orderBy(desc(receipts.date));
       res.json(userReceipts);
     } catch (error) {

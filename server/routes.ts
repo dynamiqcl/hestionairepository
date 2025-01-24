@@ -124,6 +124,63 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/companies/:id", ensureAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, rut } = req.body;
+      
+      const [company] = await db
+        .select()
+        .from(companies)
+        .where(and(
+          eq(companies.id, parseInt(id)),
+          eq(companies.userId, req.user!.id)
+        ));
+
+      if (!company) {
+        return res.status(404).json({ error: "Empresa no encontrada" });
+      }
+
+      const [updatedCompany] = await db
+        .update(companies)
+        .set({ name, rut, updatedAt: new Date() })
+        .where(eq(companies.id, parseInt(id)))
+        .returning();
+
+      res.json(updatedCompany);
+    } catch (error) {
+      console.error("Error al actualizar empresa:", error);
+      res.status(500).json({ error: "Error al actualizar empresa" });
+    }
+  });
+
+  app.delete("/api/companies/:id", ensureAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [company] = await db
+        .select()
+        .from(companies)
+        .where(and(
+          eq(companies.id, parseInt(id)),
+          eq(companies.userId, req.user!.id)
+        ));
+
+      if (!company) {
+        return res.status(404).json({ error: "Empresa no encontrada" });
+      }
+
+      await db
+        .delete(companies)
+        .where(eq(companies.id, parseInt(id)));
+
+      res.json({ message: "Empresa eliminada correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar empresa:", error);
+      res.status(500).json({ error: "Error al eliminar empresa" });
+    }
+  });
+
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {

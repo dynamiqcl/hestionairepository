@@ -364,11 +364,21 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Rutas de categorías
-  app.get("/api/categories", async (req, res) => {
+  app.get("/api/categories", ensureAuth, async (req, res) => {
     try {
-      const allCategories = await db.select().from(categories);
+      const allCategories = await db
+        .select({
+          id: categories.id,
+          name: categories.name,
+          description: categories.description,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        })
+        .from(categories)
+        .orderBy(desc(categories.createdAt));
       res.json(allCategories);
     } catch (error) {
+      console.error("Error al obtener categorías:", error);
       res.status(500).json({ error: "Error al obtener categorías" });
     }
   });

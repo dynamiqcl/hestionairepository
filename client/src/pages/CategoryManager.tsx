@@ -31,8 +31,8 @@ export default function CategoryManager() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
 
-  const { data: categories } = useQuery({
-    queryKey: ['/api/categories'],
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
       const response = await fetch('/api/categories');
       if (!response.ok) throw new Error('Error al obtener categorías');

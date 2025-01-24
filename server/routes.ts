@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema, users, UserRole } from "@db/schema";
+import { receipts, companies, alertRules, alertNotifications, insertReceiptSchema, insertAlertRuleSchema, insertAlertNotificationSchema, users, UserRole, categories } from "@db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -355,6 +355,54 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error al actualizar notificación:", error);
       res.status(500).json({ error: "Error al actualizar notificación" });
+    }
+  });
+
+  // Rutas de categorías
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const allCategories = await db.select().from(categories);
+      res.json(allCategories);
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener categorías" });
+    }
+  });
+
+  app.post("/api/categories", ensureAdmin, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const [newCategory] = await db
+        .insert(categories)
+        .values({ name, description })
+        .returning();
+      res.json(newCategory);
+    } catch (error) {
+      res.status(500).json({ error: "Error al crear categoría" });
+    }
+  });
+
+  app.put("/api/categories/:id", ensureAdmin, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const [updatedCategory] = await db
+        .update(categories)
+        .set({ name, description })
+        .where(eq(categories.id, parseInt(req.params.id)))
+        .returning();
+      res.json(updatedCategory);
+    } catch (error) {
+      res.status(500).json({ error: "Error al actualizar categoría" });
+    }
+  });
+
+  app.delete("/api/categories/:id", ensureAdmin, async (req, res) => {
+    try {
+      await db
+        .delete(categories)
+        .where(eq(categories.id, parseInt(req.params.id)));
+      res.json({ message: "Categoría eliminada correctamente" });
+    } catch (error) {
+      res.status(500).json({ error: "Error al eliminar categoría" });
     }
   });
 

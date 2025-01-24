@@ -147,6 +147,14 @@ export default function Dashboard() {
               Alertas
             </Button>
           </Link>
+          {isAdmin && (
+            <Link href="/categories">
+              <Button variant="outline">
+                <Pencil className="w-4 h-4 mr-2" />
+                Categorías
+              </Button>
+            </Link>
+          )}
           <Button variant="outline" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Salir

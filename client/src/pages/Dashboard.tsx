@@ -16,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const { data: receipts, isLoading, deleteReceipt } = useReceipts();
   const { user, logout, isAdmin } = useAuth();
   const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: companies } = useQuery({
@@ -98,9 +100,23 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-bold">Panel de Rendiciones</h1>
-          <p className="text-muted-foreground">Bienvenido, {user?.nombreCompleto || user?.username}</p>
+        <div className="flex items-center w-full justify-between md:w-auto">
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold">Panel de Rendiciones</h1>
+            <p className="text-muted-foreground">Bienvenido, {user?.nombreCompleto || user?.username}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
         </div>
         <div className="hidden md:flex md:items-center md:space-x-4">
           <Link href="/upload">
@@ -157,6 +173,26 @@ export default function Dashboard() {
             </Link>
           )}
           <Button variant="ghost" onClick={() => logout()}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Salir
+          </Button>
+        </div>
+        
+        {/* Mobile menu */}
+        <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:hidden flex-col w-full space-y-2`}>
+          <Link href="/upload">
+            <Button variant="ghost" className="w-full justify-start">
+              <Receipt className="w-4 h-4 mr-2" />
+              Subir Boleta
+            </Button>
+          </Link>
+          <Link href="/tables">
+            <Button variant="ghost" className="w-full justify-start">
+              <Settings className="w-4 h-4 mr-2" />
+              Mantenedores
+            </Button>
+          </Link>
+          <Button variant="ghost" className="w-full justify-start" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Salir
           </Button>

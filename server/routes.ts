@@ -170,7 +170,8 @@ export function registerRoutes(app: Express): Server {
         date: new Date(req.body.date),
         total: parseFloat(req.body.total.toString()),
         taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
-        receiptId: `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+        receiptId: `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+        categoryId: req.body.categoryId
       };
 
       const [newReceipt] = await db

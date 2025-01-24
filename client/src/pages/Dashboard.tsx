@@ -218,7 +218,7 @@ export default function Dashboard() {
                     <td className="p-4">{new Date(receipt.date).toLocaleDateString('es-ES')}</td>
                     <td className="p-4">{receipt.companyName || 'Sin empresa'}</td>
                     <td className="p-4">{receipt.vendor}</td>
-                    <td className="p-4">{receipt.category}</td>
+                    <td className="p-4">{receipt.category || 'Sin categoría'}</td>
                     <td className="p-4 text-right">{formatCLP(Number(receipt.total))}</td>
                     <td className="p-4">
                       <div className="flex justify-center gap-2">

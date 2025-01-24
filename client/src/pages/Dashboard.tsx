@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus } from "lucide-react";
 import {
   Dialog,
@@ -41,7 +42,7 @@ const formatCLP = (amount: number) => {
 
 export default function Dashboard() {
   const { data: receipts, isLoading, deleteReceipt } = useReceipts();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
   const { toast } = useToast();
 

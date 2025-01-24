@@ -269,7 +269,16 @@ export default function Dashboard() {
                                   <img
                                     src={receipt.imageUrl}
                                     alt={`Boleta ${receipt.receiptId}`}
-                                    className="object-contain w-full h-full"
+                                    className="object-contain w-full h-full max-h-[80vh]"
+                                    style={{ 
+                                      maxWidth: '100%',
+                                      margin: '0 auto',
+                                      display: 'block'
+                                    }}
+                                    onError={(e) => {
+                                      console.error('Error loading image:', receipt.imageUrl);
+                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                    }}
                                   />
                                 </div>
                               </DialogContent>

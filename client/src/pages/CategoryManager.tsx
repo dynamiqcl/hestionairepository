@@ -152,7 +152,11 @@ export default function CategoryManager() {
                     <div className="flex justify-end gap-2">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setEditingCategory(category)}
+                          >
                             <Pencil className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>

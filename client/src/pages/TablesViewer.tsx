@@ -12,6 +12,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
+import { Navbar } from "@/components/ui/navbar";
+
 export default function TablesViewer() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
@@ -82,7 +84,9 @@ export default function TablesViewer() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div>
+      <Navbar />
+      <div className="container mx-auto p-4">
       <Card>
         <CardHeader>
           <CardTitle>Mantenedor de Tablas</CardTitle>

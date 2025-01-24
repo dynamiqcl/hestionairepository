@@ -41,7 +41,10 @@ interface ExtractedData {
   taxAmount: number;
 }
 
-const categories = ['Alimentación', 'Transporte', 'Oficina', 'Otros'];
+import { useCategories } from "@/hooks/use-categories";
+
+// ...dentro del componente ReceiptUpload
+const { categories } = useCategories();
 
 function useCompanies() {
   return useQuery<{ id: number, name: string }[]>({
@@ -423,8 +426,8 @@ export default function ReceiptUpload() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

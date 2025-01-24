@@ -24,6 +24,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCategories } from "@/hooks/use-categories";
 import { Loader2 } from "lucide-react";
 
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+
 export default function CategoryManager() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
@@ -112,7 +115,8 @@ export default function CategoryManager() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <QueryClientProvider client={queryClient}>
+      <div className="container mx-auto p-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Mantenedor de Categorías</CardTitle>
@@ -224,5 +228,6 @@ export default function CategoryManager() {
         </CardContent>
       </Card>
     </div>
+    </QueryClientProvider>
   );
 }

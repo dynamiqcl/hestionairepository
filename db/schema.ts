@@ -2,11 +2,18 @@ import { pgTable, text, serial, timestamp, numeric, integer, boolean } from "dri
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const UserRole = {
+  CLIENTE: 'CLIENTE',
+  ADMINISTRADOR: 'ADMINISTRADOR',
+  CONSULTOR: 'CONSULTOR'
+} as const;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
   nombreCompleto: text("nombre_completo"),
+  role: text("role").notNull().default(UserRole.CLIENTE),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

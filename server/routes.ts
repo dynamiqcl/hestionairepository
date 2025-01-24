@@ -293,3 +293,31 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
   return httpServer;
 }
+export function registerRoutes(app: Express): Server {
+  // Setup authentication routes
+  setupAuth(app);
+
+  // Actualizar rol de administrador
+  app.post("/api/admin/init", async (req, res) => {
+    try {
+      await db
+        .update(users)
+        .set({ role: UserRole.ADMINISTRADOR })
+        .where(eq(users.username, "management@hestion.cl"));
+      
+      res.json({ message: "Rol de administrador asignado correctamente" });
+    } catch (error) {
+      console.error("Error al asignar rol de administrador:", error);
+      res.status(500).json({ error: "Error al asignar rol de administrador" });
+    }
+  });
+
+  // Middleware para verificar rol de administrador
+  const ensureAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+    if (req.user?.role !== UserRole.ADMINISTRADOR) {
+      return res.status(403).send("Acceso no autorizado");
+    }
+    next();
+  };
+
+  // Resto de las rutas...

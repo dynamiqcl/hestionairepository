@@ -164,6 +164,12 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/receipts", ensureAuth, async (req, res) => {
     try {
       const date = new Date();
+      const categoryId = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.name, req.body.category))
+        .then(rows => rows[0]?.id);
+
       const receiptData = {
         ...req.body,
         userId: req.user!.id,
@@ -171,7 +177,7 @@ export function registerRoutes(app: Express): Server {
         total: parseFloat(req.body.total.toString()),
         taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
         receiptId: `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-        categoryId: req.body.categoryId
+        categoryId
       };
 
       const [newReceipt] = await db

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings } from "lucide-react";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -250,21 +250,46 @@ export default function Dashboard() {
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
                         {receipt.imageUrl && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const a = document.createElement('a');
-                              a.href = receipt.imageUrl!;
-                              a.download = `boleta-${receipt.receiptId}.jpg`;
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                            }}
-                            title="Descargar imagen"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Ver imagen"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                  <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
+                                </DialogHeader>
+                                <div className="relative w-full aspect-[3/4]">
+                                  <img
+                                    src={receipt.imageUrl}
+                                    alt={`Boleta ${receipt.receiptId}`}
+                                    className="object-contain w-full h-full"
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const a = document.createElement('a');
+                                a.href = receipt.imageUrl!;
+                                a.download = `boleta-${receipt.receiptId}.jpg`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                              }}
+                              title="Descargar imagen"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>

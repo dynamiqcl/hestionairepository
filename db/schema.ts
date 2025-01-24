@@ -118,7 +118,14 @@ const baseAlertNotificationInsertSchema = createInsertSchema(alertNotifications)
 const baseAlertNotificationSelectSchema = createSelectSchema(alertNotifications);
 
 
-// Schema extendido para inserción de recibos
+// Schema para inserción de usuarios
+export const insertUserSchema = baseUserInsertSchema.extend({
+  username: z.string().email("Por favor ingresa un correo electrónico válido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  nombreCompleto: z.string().optional(),
+});
+
+// Schema para inserción de recibos
 export const insertReceiptSchema = baseInsertSchema.extend({
   date: z.coerce.date(),
   total: z.string().or(z.number()).transform(val =>
@@ -135,13 +142,6 @@ export const insertReceiptSchema = baseInsertSchema.extend({
     const date = new Date();
     return `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
   }),
-});
-
-// Schema para inserción de usuarios
-export const insertUserSchema = baseUserInsertSchema.extend({
-  username: z.string().email("Por favor ingresa un correo electrónico válido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  nombreCompleto: z.string().optional(),
 });
 
 // Schema para cuentas bancarias
@@ -176,10 +176,11 @@ export const insertAlertNotificationSchema = baseAlertNotificationInsertSchema.e
   details: z.string().optional(),
 });
 
+// Schema para selección de usuarios
+export const selectUserSchema = createSelectSchema(users);
 
 // Schemas de selección
 export const selectReceiptSchema = baseSelectSchema;
-export const selectUserSchema = baseUserSelectSchema;
 export const selectBankAccountSchema = baseBankAccountSelectSchema;
 export const selectBankTransactionSchema = baseBankTransactionSelectSchema;
 export const selectAlertRuleSchema = baseAlertRuleSelectSchema;

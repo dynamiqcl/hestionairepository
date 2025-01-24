@@ -175,6 +175,58 @@ export default function TablesViewer() {
             </TabsContent>
 
             <TabsContent value="categories">
+              <div className="mb-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>Agregar Categoría</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Nueva Categoría</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const newCategory = {
+                        name: formData.get('name'),
+                        description: formData.get('description')
+                      };
+                      fetch('/api/categories', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(newCategory)
+                      })
+                      .then(response => {
+                        if (!response.ok) throw new Error('Error al crear categoría');
+                        return response.json();
+                      })
+                      .then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['categories'] });
+                        toast({ title: "Categoría creada exitosamente" });
+                      })
+                      .catch(error => {
+                        toast({ 
+                          title: "Error", 
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      });
+                    }} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" name="name" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Descripción</Label>
+                        <Input id="description" name="description" required />
+                      </div>
+                      <Button type="submit">Crear Categoría</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>

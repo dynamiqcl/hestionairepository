@@ -127,7 +127,7 @@ export function registerRoutes(app: Express): Server {
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      const userReceipts = await db
+      let query = db
         .select({
           id: receipts.id,
           userId: receipts.userId,
@@ -135,7 +135,7 @@ export function registerRoutes(app: Express): Server {
           date: receipts.date,
           total: receipts.total,
           vendor: receipts.vendor,
-          category: receipts.category,
+          categoryId: receipts.categoryId,
           taxAmount: receipts.taxAmount,
           rawText: receipts.rawText,
           imageUrl: receipts.imageUrl,
@@ -144,15 +144,15 @@ export function registerRoutes(app: Express): Server {
           companyName: companies.name,
         })
         .from(receipts)
-        .leftJoin(companies, eq(receipts.companyId, companies.id))
-        .where(
-          and(
-            eq(receipts.userId, req.user!.id),
-            eq(companies.userId, req.user!.id)
-          )
-        )
-        .orderBy(desc(receipts.date));
-      res.json(userReceipts);
+        .leftJoin(companies, eq(receipts.companyId, companies.id));
+
+      // Si no es admin, filtrar solo las boletas del usuario
+      if (req.user?.role !== UserRole.ADMINISTRADOR) {
+        query = query.where(eq(receipts.userId, req.user!.id));
+      }
+
+      const allReceipts = await query.orderBy(desc(receipts.date));
+      res.json(allReceipts);
     } catch (error) {
       console.error("Error al obtener las boletas:", error);
       res.status(500).json({ error: "Error al obtener las boletas" });

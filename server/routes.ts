@@ -102,20 +102,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Boleta no encontrada" });
       }
 
-      // Verify receipt belongs to user
-      const [existingReceipt] = await db
-        .select()
-        .from(receipts)
-        .where(and(
-          eq(receipts.id, parseInt(id)),
-          eq(receipts.userId, req.user!.id)
-        ))
-        .limit(1);
-
-      if (!existingReceipt) {
-        return res.status(404).json({ error: "Boleta no encontrada" });
-      }
-
       const [updatedReceipt] = await db
         .update(receipts)
         .set({

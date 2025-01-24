@@ -2,7 +2,18 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell } from "lucide-react";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
@@ -72,6 +83,27 @@ export default function Dashboard() {
   const { data: receipts, isLoading, updateReceipt, deleteReceipt } = useReceipts();
   const { user, logout } = useAuth();
   const [editingReceipt, setEditingReceipt] = useState<any>(null);
+  const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
+
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/companies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCompany),
+      });
+      
+      if (response.ok) {
+        setNewCompany({ name: "", rut: "" });
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error al crear empresa:', error);
+    }
+  };
 
   // Calcular totales y datos para el gráfico
   const totalAmount = receipts?.reduce((sum, receipt) => sum + Number(receipt.total), 0) || 0;
@@ -142,6 +174,43 @@ export default function Dashboard() {
               Subir Boleta
             </Button>
           </Link>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Empresa
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear Nueva Empresa</DialogTitle>
+                <DialogDescription>
+                  Ingresa los datos de la nueva empresa
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateCompany} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre</Label>
+                  <Input
+                    id="name"
+                    value={newCompany.name}
+                    onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rut">RUT</Label>
+                  <Input
+                    id="rut"
+                    value={newCompany.rut}
+                    onChange={(e) => setNewCompany({...newCompany, rut: e.target.value})}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="submit">Crear Empresa</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Link href="/alerts">
             <Button variant="outline">
               <Bell className="w-4 h-4 mr-2" />

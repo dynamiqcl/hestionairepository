@@ -115,8 +115,7 @@ export default function CategoryManager() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Mantenedor de Categorías</CardTitle>
@@ -228,6 +227,5 @@ export default function CategoryManager() {
         </CardContent>
       </Card>
     </div>
-    </QueryClientProvider>
   );
 }

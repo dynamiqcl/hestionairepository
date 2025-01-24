@@ -8,6 +8,13 @@ export function useReceipts() {
 
   const query = useQuery<Receipt[]>({
     queryKey: ['/api/receipts'],
+    queryFn: async () => {
+      const response = await fetch('/api/receipts', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error al obtener las boletas');
+      return response.json();
+    }
   });
 
   const addReceipt = async (receipt: Partial<InsertReceipt>) => {

@@ -38,9 +38,6 @@ export function Navbar() {
             <Link href="/tables">
               <Button variant="ghost">Mantenedores</Button>
             </Link>
-            <Link href="/companies">
-              <Button variant="ghost">Empresas</Button>
-            </Link>
           </div>
 
           <div className="flex items-center">

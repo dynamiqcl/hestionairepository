@@ -10,7 +10,7 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-[#223549] text-[#E0DECF] backdrop-blur supports-[backdrop-filter]:bg-[#223549]/90">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-[#807D50] text-[#E0DECF] backdrop-blur supports-[backdrop-filter]:bg-[#807D50]/90">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">

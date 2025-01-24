@@ -1,6 +1,4 @@
-
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,75 +19,96 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useCategories } from "@/hooks/use-categories";
+import { Loader2 } from "lucide-react";
 
 export default function CategoryManager() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const response = await fetch('/api/categories');
-      if (!response.ok) throw new Error('Error al obtener categorías');
-      return response.json();
-    }
-  });
-
-  const addMutation = useMutation({
-    mutationFn: async (category: typeof newCategory) => {
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(category),
-      });
-      if (!response.ok) throw new Error('Error al crear categoría');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({ title: "Categoría creada correctamente" });
-      setNewCategory({ name: "", description: "" });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async (category: any) => {
-      const response = await fetch(`/api/categories/${category.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(category),
-      });
-      if (!response.ok) throw new Error('Error al actualizar categoría');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({ title: "Categoría actualizada correctamente" });
-      setEditingCategory(null);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/categories/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Error al eliminar categoría');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({ title: "Categoría eliminada correctamente" });
-    },
-  });
+  const {
+    categories,
+    isLoading,
+    addCategory,
+    updateCategory,
+    deleteCategory
+  } = useCategories();
 
   if (!isAdmin) {
-    return <div className="container mx-auto p-4">No tienes acceso a esta página.</div>;
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="pt-6">
+            <div className="flex mb-4 gap-2">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+              <h1 className="text-2xl font-bold text-gray-900">Acceso Denegado</h1>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              No tienes permisos para acceder a esta página. Esta sección está reservada para administradores.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addCategory(newCategory);
+      setNewCategory({ name: "", description: "" });
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error al crear categoría:", error);
+    }
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+
+    try {
+      await updateCategory(editingCategory);
+      setEditingCategory(null);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error("Error al actualizar categoría:", error);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm("¿Estás seguro de eliminar esta categoría? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    try {
+      await deleteCategory(id);
+      toast({
+        title: "Categoría eliminada",
+        description: "La categoría ha sido eliminada exitosamente",
+      });
+    } catch (error) {
+      console.error("Error al eliminar categoría:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la categoría",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -97,7 +116,7 @@ export default function CategoryManager() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Mantenedor de Categorías</CardTitle>
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -108,10 +127,7 @@ export default function CategoryManager() {
               <DialogHeader>
                 <DialogTitle>Crear Nueva Categoría</DialogTitle>
               </DialogHeader>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                addMutation.mutate(newCategory);
-              }} className="space-y-4">
+              <form onSubmit={handleAddCategory} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nombre</Label>
                   <Input
@@ -144,13 +160,13 @@ export default function CategoryManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories?.map((category: any) => (
+              {categories?.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>{category.name}</TableCell>
                   <TableCell>{category.description}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Dialog>
+                      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                         <DialogTrigger asChild>
                           <Button 
                             variant="ghost" 
@@ -164,10 +180,7 @@ export default function CategoryManager() {
                           <DialogHeader>
                             <DialogTitle>Editar Categoría</DialogTitle>
                           </DialogHeader>
-                          <form onSubmit={(e) => {
-                            e.preventDefault();
-                            updateMutation.mutate(editingCategory);
-                          }} className="space-y-4">
+                          <form onSubmit={handleUpdateCategory} className="space-y-4">
                             <div className="space-y-2">
                               <Label htmlFor="edit-name">Nombre</Label>
                               <Input
@@ -198,11 +211,7 @@ export default function CategoryManager() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          if (confirm('¿Estás seguro de eliminar esta categoría?')) {
-                            deleteMutation.mutate(category.id);
-                          }
-                        }}
+                        onClick={() => handleDeleteCategory(category.id)}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>

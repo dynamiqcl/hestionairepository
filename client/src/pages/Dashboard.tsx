@@ -125,45 +125,12 @@ export default function Dashboard() {
               Subir Boleta
             </Button>
           </Link>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost">
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Empresa
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Crear Nueva Empresa</DialogTitle>
-                <DialogDescription>
-                  Ingresa los datos de la nueva empresa
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateCompany} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre</Label>
-                  <Input
-                    id="name"
-                    value={newCompany.name}
-                    onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rut">RUT</Label>
-                  <Input
-                    id="rut"
-                    value={newCompany.rut}
-                    onChange={(e) => setNewCompany({...newCompany, rut: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="submit">Crear Empresa</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Link href="/companies"> {/* Reemplazo aquí */}
+            <Button variant="ghost">
+              <Plus className="w-4 h-4 mr-2" />
+              Ir a Empresas
+            </Button>
+          </Link>
           {isAdmin && (
             <Link href="/tables">
               <Button variant="ghost">

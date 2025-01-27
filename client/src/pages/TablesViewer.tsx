@@ -312,6 +312,7 @@ export default function TablesViewer() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Receipt ID</TableHead>
+                    <TableHead>Usuario</TableHead>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Vendedor</TableHead>
@@ -323,6 +324,7 @@ export default function TablesViewer() {
                     <TableRow key={receipt.id}>
                       <TableCell>{receipt.id}</TableCell>
                       <TableCell>{receipt.receiptId}</TableCell>
+                      <TableCell>{receipt.username}</TableCell>
                       <TableCell>{new Date(receipt.date).toLocaleDateString()}</TableCell>
                       <TableCell>${receipt.total}</TableCell>
                       <TableCell>{receipt.vendor}</TableCell>

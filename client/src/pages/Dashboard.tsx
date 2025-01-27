@@ -144,7 +144,7 @@ export default function Dashboard() {
             Salir
           </Button>
         </div>
-        
+
         {/* Mobile menu */}
         <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:hidden flex-col w-full space-y-2`}>
           <Link href="/upload">
@@ -206,7 +206,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {receipts?.map((receipt) => (
+                {receipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
                   <tr key={receipt.id} className="border-b">
                     <td className="p-4">{receipt.receiptId}</td>
                     <td className="p-4">{new Date(receipt.date).toLocaleDateString('es-ES')}</td>

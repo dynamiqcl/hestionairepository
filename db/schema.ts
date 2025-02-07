@@ -5,8 +5,25 @@ import { z } from "zod";
 export const UserRole = {
   CLIENTE: 'CLIENTE',
   ADMINISTRADOR: 'ADMINISTRADOR',
-  CONSULTOR: 'CONSULTOR'
+  EMPLEADO: 'EMPLEADO'
 } as const;
+
+// Tabla de usuarios mejorada
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").unique().notNull(),
+  password: text("password").notNull(),
+  nombreCompleto: text("nombre_completo").notNull(),
+  nombreEmpresa: text("nombre_empresa").notNull(),
+  rutEmpresa: text("rut_empresa").notNull(),
+  email: text("email").notNull(),
+  direccion: text("direccion"),
+  telefono: text("telefono"),
+  fechaRegistro: timestamp("fecha_registro").defaultNow(),
+  role: text("role").notNull().default(UserRole.CLIENTE),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Tabla de categorías mejorada
 export const categories = pgTable("categories", {
@@ -17,16 +34,6 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: integer("created_by").references(() => users.id),
-});
-
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").unique().notNull(),
-  password: text("password").notNull(),
-  nombreCompleto: text("nombre_completo"),
-  role: text("role").notNull().default(UserRole.CLIENTE),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const companies = pgTable("companies", {
@@ -61,11 +68,17 @@ const baseSelectSchema = createSelectSchema(receipts);
 const baseUserInsertSchema = createInsertSchema(users);
 const baseUserSelectSchema = createSelectSchema(users);
 
-// Schema para inserción de usuarios
-export const insertUserSchema = baseUserInsertSchema.extend({
+// Schema para inserción de usuarios actualizado
+export const insertUserSchema = createInsertSchema(users).extend({
   username: z.string().email("Por favor ingresa un correo electrónico válido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  nombreCompleto: z.string().optional(),
+  nombreCompleto: z.string().min(1, "El nombre completo es requerido"),
+  nombreEmpresa: z.string().min(1, "El nombre de la empresa es requerido"),
+  rutEmpresa: z.string().min(1, "El RUT de la empresa es requerido"),
+  email: z.string().email("Por favor ingresa un correo electrónico válido"),
+  direccion: z.string().optional(),
+  telefono: z.string().optional(),
+  role: z.enum([UserRole.CLIENTE, UserRole.ADMINISTRADOR, UserRole.EMPLEADO])
 });
 
 // Schema para inserción de recibos

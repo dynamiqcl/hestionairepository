@@ -79,6 +79,12 @@ export function registerRoutes(app: Express): Server {
           id: users.id,
           username: users.username,
           nombreCompleto: users.nombreCompleto,
+          nombreEmpresa: users.nombreEmpresa,
+          rutEmpresa: users.rutEmpresa,
+          email: users.email,
+          direccion: users.direccion,
+          telefono: users.telefono,
+          fechaRegistro: users.fechaRegistro,
           role: users.role,
           createdAt: users.createdAt,
         })
@@ -91,6 +97,49 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Error al obtener usuarios" });
     }
   });
+
+  // Crear nuevo usuario (solo admin)
+  app.post("/api/users", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const userData = {
+        ...req.body,
+        fechaRegistro: new Date(),
+      };
+
+      const [newUser] = await db
+        .insert(users)
+        .values(userData)
+        .returning();
+
+      res.json(newUser);
+    } catch (error) {
+      console.error("Error al crear usuario:", error);
+      res.status(500).json({ error: "Error al crear usuario" });
+    }
+  });
+
+  // Actualizar usuario existente (solo admin)
+  app.put("/api/users/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date(),
+      };
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, parseInt(id)))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error al actualizar usuario:", error);
+      res.status(500).json({ error: "Error al actualizar usuario" });
+    }
+  });
+
 
   // Rutas de empresas
   app.get("/api/companies", ensureAuth, async (req, res) => {
@@ -315,10 +364,10 @@ export function registerRoutes(app: Express): Server {
       const { name, description } = req.body;
       const [newCategory] = await db
         .insert(categories)
-        .values({ 
-          name, 
+        .values({
+          name,
           description,
-          createdBy: req.user!.id 
+          createdBy: req.user!.id
         })
         .returning();
       res.json(newCategory);

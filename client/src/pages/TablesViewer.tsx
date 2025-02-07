@@ -80,8 +80,16 @@ export default function TablesViewer() {
     },
   });
 
+  const validateEmail = (email: string) => {
+    return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  };
+
   const createUserMutation = useMutation({
     mutationFn: async (newUser: any) => {
+      if (!validateEmail(newUser.username)) {
+        throw new Error('Por favor ingrese un correo electrónico válido');
+      }
+      
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

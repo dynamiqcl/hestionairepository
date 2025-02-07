@@ -112,9 +112,10 @@ export default function Dashboard() {
     }
   };
 
-  // Calcular totales y datos para el gráfico
-  const totalAmount = receipts?.reduce((sum, receipt) => sum + Number(receipt.total), 0) || 0;
-  const receiptCount = receipts?.length || 0;
+  // Calcular totales y datos para el gráfico usando los recibos filtrados
+  const userFilteredReceipts = filteredReceipts?.filter(receipt => receipt.userId === user?.id) || [];
+  const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0) || 0;
+  const receiptCount = userFilteredReceipts.length || 0;
 
   return (
     <div className="container mx-auto p-4 md:p-6">

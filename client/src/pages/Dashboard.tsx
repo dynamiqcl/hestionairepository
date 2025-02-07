@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { PieChart, Pie, Cell, Legend } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
@@ -117,6 +119,21 @@ export default function Dashboard() {
   const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0) || 0;
   const receiptCount = userFilteredReceipts.length || 0;
 
+  // Preparar datos para el gráfico de torta
+  const pieChartData = userFilteredReceipts.reduce((acc: any[], receipt) => {
+    const category = receipt.category || 'Sin categoría';
+    const existingCategory = acc.find(item => item.name === category);
+    if (existingCategory) {
+      existingCategory.value += Number(receipt.total);
+    } else {
+      acc.push({ name: category, value: Number(receipt.total) });
+    }
+    return acc;
+  }, []);
+
+  // Colores para el gráfico
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -206,6 +223,37 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Distribución por Categorías</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full h-[300px]">
+            <ChartContainer config={{}}>
+              <PieChart>
+                <Pie
+                  data={pieChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, value }) => `${name}: ${formatCLP(value)}`}
+                >
+                  {pieChartData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltipContent />} />
+                <Legend />
+              </PieChart>
+            </ChartContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

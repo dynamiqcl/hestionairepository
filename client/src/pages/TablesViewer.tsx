@@ -81,13 +81,20 @@ export default function TablesViewer() {
   });
 
   const validateEmail = (email: string) => {
-    return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+    const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    return regex.test(email);
   };
 
   const createUserMutation = useMutation({
     mutationFn: async (newUser: any) => {
-      if (!validateEmail(newUser.username)) {
+      if (!newUser.username || !validateEmail(newUser.username)) {
         throw new Error('Por favor ingrese un correo electrónico válido');
+      }
+      if (!newUser.password || newUser.password.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres');
+      }
+      if (!newUser.nombreCompleto) {
+        throw new Error('El nombre completo es requerido');
       }
       
       const response = await fetch('/api/users', {

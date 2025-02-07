@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -230,14 +230,14 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="w-full h-[400px] flex justify-center items-center">
-            <ChartContainer config={{}}>
-              <PieChart width={500} height={350}>
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
                   labelLine={true}
-                  outerRadius={130}
+                  outerRadius={120}
                   fill="#8884d8"
                   dataKey="value"
                   nameKey="name"

@@ -250,7 +250,7 @@ export default function Dashboard() {
                 <Tooltip content={<ChartTooltipContent />} />
                 <Legend />
               </PieChart>
-            </ChartContainer>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>

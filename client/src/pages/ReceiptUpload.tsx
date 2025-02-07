@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Upload, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, X } from "lucide-react";
 import Tesseract from 'tesseract.js';
 import { categorizeReceipt } from "@/lib/categorize";
 import {
@@ -39,6 +39,16 @@ interface ExtractedData {
   taxAmount: number;
 }
 
+interface ReceiptData {
+  id: string;
+  file: File;
+  preview: string;
+  isProcessing: boolean;
+  validation: ValidationResult | null;
+  extractedData: ExtractedData | null;
+  editedData: (ExtractedData & { companyId?: number }) | null;
+}
+
 function useCategories() {
   return useQuery<{ id: number, name: string }[]>({
     queryKey: ['/api/categories'],
@@ -65,36 +75,33 @@ export default function ReceiptUpload() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { addReceipt } = useReceipts();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [receipts, setReceipts] = useState<ReceiptData[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-  const [editedData, setEditedData] = useState<ExtractedData & { companyId?: number } | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const { data: companies } = useCompanies();
-  const { data } = useCategories();
+  const { data: categories } = useCategories();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    await processImage(file);
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newReceipts: ReceiptData[] = Array.from(files).map(file => ({
+      id: Math.random().toString(36).substring(7),
+      file,
+      preview: URL.createObjectURL(file),
+      isProcessing: true,
+      validation: null,
+      extractedData: null,
+      editedData: null
+    }));
+
+    setReceipts(prev => [...prev, ...newReceipts]);
+
+    // Procesar todas las boletas en paralelo
+    await Promise.all(newReceipts.map(receipt => processImage(receipt.id, receipt.file)));
   };
 
-  const processImage = async (file: File) => {
-    setPreview(URL.createObjectURL(file));
-    setIsProcessing(true);
-    setValidation(null);
-    setExtractedData(null);
-    setEditedData(null);
-    setIsEditing(false);
-
+  const processImage = async (receiptId: string, file: File) => {
     try {
-      toast({
-        title: "Procesando",
-        description: "Analizando la imagen de la boleta...",
-      });
-
       // Crear ImageData para el preprocesamiento
       const img = new Image();
       img.src = URL.createObjectURL(file);
@@ -114,18 +121,12 @@ export default function ReceiptUpload() {
         logger: m => console.log(m)
       });
 
-      console.log('Texto extraído:', result.data.text);
       const text = result.data.text;
+      console.log('Texto extraído:', text);
 
-      // Usar el sistema de categorización con imagen y texto
+      // Usar el sistema de categorización
       const receiptData = await categorizeReceipt(text, imageData);
       console.log('Datos procesados:', receiptData);
-
-      setValidation({
-        isValid: receiptData.isValid,
-        validationIssues: receiptData.validationIssues,
-        confidence: receiptData.confidence
-      });
 
       const extractedFields = {
         date: receiptData.date,
@@ -135,14 +136,27 @@ export default function ReceiptUpload() {
         taxAmount: receiptData.taxAmount,
       };
 
-      setExtractedData(extractedFields);
-      setEditedData({...extractedFields});
-      setIsEditing(true);
+      setReceipts(prev => prev.map(r => {
+        if (r.id === receiptId) {
+          return {
+            ...r,
+            isProcessing: false,
+            validation: {
+              isValid: receiptData.isValid,
+              validationIssues: receiptData.validationIssues,
+              confidence: receiptData.confidence
+            },
+            extractedData: extractedFields,
+            editedData: {...extractedFields}
+          };
+        }
+        return r;
+      }));
 
       if (!receiptData.isValid) {
         toast({
           title: "Advertencia",
-          description: "Los datos extraídos podrían no ser precisos. Por favor, verifícalos antes de guardar.",
+          description: `Los datos extraídos de la boleta ${file.name} podrían no ser precisos. Por favor, verifícalos.`,
           variant: "destructive",
         });
       }
@@ -150,26 +164,29 @@ export default function ReceiptUpload() {
       console.error('Error al procesar la boleta:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo procesar la boleta. Por favor, intente nuevamente.",
+        description: `Error al procesar la boleta ${file.name}. ${error instanceof Error ? error.message : "Por favor, intente nuevamente."}`,
         variant: "destructive",
       });
-    } finally {
-      setIsProcessing(false);
+
+      setReceipts(prev => prev.map(r => {
+        if (r.id === receiptId) {
+          return { ...r, isProcessing: false };
+        }
+        return r;
+      }));
     }
   };
 
-  const handleSave = async () => {
-    if (!editedData || !preview) return;
+  const handleSave = async (receipt: ReceiptData) => {
+    if (!receipt.editedData || !receipt.preview) return;
 
     try {
       const receiptToSave = {
-        ...editedData,
-        date: editedData.date instanceof Date ? editedData.date.toISOString() : new Date(editedData.date).toISOString(),
-        rawText: extractedData?.vendor || "",
-        imageUrl: preview
+        ...receipt.editedData,
+        date: receipt.editedData.date instanceof Date ? receipt.editedData.date.toISOString() : new Date(receipt.editedData.date).toISOString(),
+        rawText: receipt.extractedData?.vendor || "",
+        imageUrl: receipt.preview
       };
-
-      console.log('Datos a enviar:', receiptToSave);
 
       await addReceipt(receiptToSave);
 
@@ -178,7 +195,8 @@ export default function ReceiptUpload() {
         description: "La boleta ha sido procesada y guardada correctamente",
       });
 
-      setLocation("/");
+      // Eliminar la boleta procesada de la lista
+      setReceipts(prev => prev.filter(r => r.id !== receipt.id));
     } catch (error) {
       console.error('Error al guardar la boleta:', error);
       toast({
@@ -189,204 +207,273 @@ export default function ReceiptUpload() {
     }
   };
 
+  const handleRemoveReceipt = (receiptId: string) => {
+    setReceipts(prev => prev.filter(r => r.id !== receiptId));
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6">
-      <Card className="max-w-md mx-auto">
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Subir Boleta</CardTitle>
+          <CardTitle>Subir Boletas</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="receipt">Imagen de la Boleta</Label>
+              <Label htmlFor="receipt">Imágenes de Boletas</Label>
               <div className="mt-2">
                 <div className="flex flex-col items-center justify-center w-full">
                   <label
                     htmlFor="receipt"
-                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 relative overflow-hidden"
+                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50"
                   >
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <p className="text-sm text-center text-muted-foreground px-4">
-                          Arrastra y suelta una imagen o haz clic para seleccionar
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                      <p className="text-sm text-center text-muted-foreground px-4">
+                        Arrastra y suelta imágenes o haz clic para seleccionar múltiples boletas
+                      </p>
+                    </div>
                     <Input
                       ref={fileInputRef}
                       id="receipt"
                       type="file"
                       accept="image/*"
+                      multiple
                       className="hidden"
-                      disabled={isProcessing}
                       onChange={handleFileUpload}
                     />
                   </label>
                 </div>
               </div>
             </div>
-
-            {isEditing && editedData && (
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
-                <h3 className="font-medium">Editar Datos Extraídos</h3>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  <Select
-                    value={editedData.companyId?.toString()}
-                    onValueChange={(value) => setEditedData({
-                      ...editedData,
-                      companyId: parseInt(value, 10)
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una empresa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies?.map((company) => (
-                        <SelectItem key={company.id} value={company.id.toString()}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="date">
-                    Fecha
-                    {validation && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (Confianza: {Math.round(validation.confidence.date * 100)}%)
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={format(editedData.date, 'yyyy-MM-dd')}
-                    onChange={(e) => setEditedData({
-                      ...editedData,
-                      date: new Date(e.target.value)
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="total">
-                    Monto Total (CLP)
-                    {validation && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (Confianza: {Math.round(validation.confidence.amount * 100)}%)
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id="total"
-                    type="number"
-                    value={editedData.total}
-                    onChange={(e) => setEditedData({
-                      ...editedData,
-                      total: parseInt(e.target.value, 10),
-                      taxAmount: Math.round(parseInt(e.target.value, 10) * 0.19)
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vendor">
-                    Proveedor
-                    {validation && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (Confianza: {Math.round(validation.confidence.vendor * 100)}%)
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id="vendor"
-                    value={editedData.vendor}
-                    onChange={(e) => setEditedData({
-                      ...editedData,
-                      vendor: e.target.value
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">
-                    Categoría
-                    {validation && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (Confianza: {Math.round(validation.confidence.category * 100)}%)
-                      </span>
-                    )}
-                  </Label>
-                  <Select
-                    value={editedData.category}
-                    onValueChange={(value) => setEditedData({
-                      ...editedData,
-                      category: value
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data?.map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="taxAmount">IVA Estimado (19%)</Label>
-                  <Input
-                    id="taxAmount"
-                    type="number"
-                    value={editedData.taxAmount}
-                    disabled
-                  />
-                </div>
-              </div>
-            )}
-
-            {isProcessing && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="ml-2">Procesando boleta...</span>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/")}
-                disabled={isProcessing}
-              >
-                Cancelar
-              </Button>
-              {isEditing && (
-                <Button
-                  onClick={handleSave}
-                  disabled={isProcessing || !editedData}
-                >
-                  Guardar
-                </Button>
-              )}
-            </div>
           </div>
         </CardContent>
       </Card>
+
+      {receipts.map((receipt) => (
+        <Card key={receipt.id} className="mb-4">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">
+                {receipt.file.name}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveReceipt(receipt.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <img
+                  src={receipt.preview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+
+              {receipt.isProcessing ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Procesando boleta...</span>
+                </div>
+              ) : receipt.editedData ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`company-${receipt.id}`}>Empresa</Label>
+                    <Select
+                      value={receipt.editedData.companyId?.toString()}
+                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              companyId: parseInt(value, 10)
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((company) => (
+                          <SelectItem key={company.id} value={company.id.toString()}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`date-${receipt.id}`}>
+                      Fecha
+                      {receipt.validation && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Confianza: {Math.round(receipt.validation.confidence.date * 100)}%)
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id={`date-${receipt.id}`}
+                      type="date"
+                      value={format(receipt.editedData.date, 'yyyy-MM-dd')}
+                      onChange={(e) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              date: new Date(e.target.value)
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`total-${receipt.id}`}>
+                      Monto Total (CLP)
+                      {receipt.validation && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Confianza: {Math.round(receipt.validation.confidence.amount * 100)}%)
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id={`total-${receipt.id}`}
+                      type="number"
+                      value={receipt.editedData.total}
+                      onChange={(e) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              total: parseInt(e.target.value, 10),
+                              taxAmount: Math.round(parseInt(e.target.value, 10) * 0.19)
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`vendor-${receipt.id}`}>
+                      Proveedor
+                      {receipt.validation && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Confianza: {Math.round(receipt.validation.confidence.vendor * 100)}%)
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id={`vendor-${receipt.id}`}
+                      value={receipt.editedData.vendor}
+                      onChange={(e) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              vendor: e.target.value
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`category-${receipt.id}`}>
+                      Categoría
+                      {receipt.validation && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Confianza: {Math.round(receipt.validation.confidence.category * 100)}%)
+                        </span>
+                      )}
+                    </Label>
+                    <Select
+                      value={receipt.editedData.category}
+                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              category: value
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories?.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`tax-${receipt.id}`}>IVA Estimado (19%)</Label>
+                    <Input
+                      id={`tax-${receipt.id}`}
+                      type="number"
+                      value={receipt.editedData.taxAmount}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => handleSave(receipt)}
+                      className="w-full md:w-auto"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Guardar Boleta
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  <p className="text-muted-foreground">
+                    Error al procesar la boleta. Por favor, inténtalo de nuevo.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      <div className="flex justify-end space-x-2 mt-4">
+        <Button
+          variant="outline"
+          onClick={() => setLocation("/")}
+        >
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
 }

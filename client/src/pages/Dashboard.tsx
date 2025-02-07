@@ -52,6 +52,25 @@ export default function Dashboard() {
   const { user, logout, isAdmin } = useAuth();
   const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    id: '',
+    date: '',
+    company: '',
+    vendor: '',
+    category: '',
+    total: ''
+  });
+
+  const filteredReceipts = receipts?.filter(receipt => {
+    return (
+      (!filters.id || receipt.receiptId.toLowerCase().includes(filters.id.toLowerCase())) &&
+      (!filters.date || receipt.date.toString().includes(filters.date)) &&
+      (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
+      (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
+      (!filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase())) &&
+      (!filters.total || receipt.total.toString().includes(filters.total))
+    );
+  });
   const { toast } = useToast();
 
   const { data: companies } = useQuery({
@@ -196,17 +215,72 @@ export default function Dashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-4 text-left">ID</th>
-                  <th className="p-4 text-left">Fecha</th>
-                  <th className="p-4 text-left">Empresa</th>
-                  <th className="p-4 text-left">Proveedor</th>
-                  <th className="p-4 text-left">Categoría</th>
-                  <th className="p-4 text-right">Monto</th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>ID</div>
+                      <Input 
+                        placeholder="Filtrar ID"
+                        onChange={(e) => setFilters(prev => ({...prev, id: e.target.value}))}
+                        className="max-w-[100px]"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Fecha</div>
+                      <Input 
+                        type="date"
+                        onChange={(e) => setFilters(prev => ({...prev, date: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Empresa</div>
+                      <Input 
+                        placeholder="Filtrar empresa"
+                        onChange={(e) => setFilters(prev => ({...prev, company: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Proveedor</div>
+                      <Input 
+                        placeholder="Filtrar proveedor"
+                        onChange={(e) => setFilters(prev => ({...prev, vendor: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Categoría</div>
+                      <Input 
+                        placeholder="Filtrar categoría"
+                        onChange={(e) => setFilters(prev => ({...prev, category: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Monto</div>
+                      <Input 
+                        placeholder="Filtrar monto"
+                        type="number"
+                        onChange={(e) => setFilters(prev => ({...prev, total: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
                   <th className="p-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {receipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
+                {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
                   <tr key={receipt.id} className="border-b">
                     <td className="p-4">{receipt.receiptId}</td>
                     <td className="p-4">{new Date(receipt.date).toLocaleDateString('es-ES')}</td>

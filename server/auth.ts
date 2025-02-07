@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { users, insertUserSchema } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -28,9 +29,20 @@ const crypto = {
   },
 };
 
+// Esquema específico para login
+const loginSchema = z.object({
+  username: z.string().email("Por favor ingresa un correo electrónico válido"),
+  password: z.string().min(1, "La contraseña es requerida"),
+});
+
 declare global {
   namespace Express {
-    interface User extends User { }
+    interface User {
+      id: number;
+      username: string;
+      role: string;
+      nombreCompleto: string;
+    }
   }
 }
 
@@ -123,9 +135,8 @@ export function setupAuth(app: Express) {
       const [newUser] = await db
         .insert(users)
         .values({
-          username,
+          ...result.data,
           password: hashedPassword,
-          nombreCompleto,
         })
         .returning();
 
@@ -135,7 +146,12 @@ export function setupAuth(app: Express) {
         }
         return res.json({
           message: "Registro exitoso",
-          user: { id: newUser.id, username: newUser.username, nombreCompleto: newUser.nombreCompleto },
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            nombreCompleto: newUser.nombreCompleto,
+            role: newUser.role
+          }
         });
       });
     } catch (error) {
@@ -144,14 +160,14 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
+    const result = loginSchema.safeParse(req.body);
     if (!result.success) {
       return res
         .status(400)
         .send("Datos inválidos: " + result.error.issues.map(i => i.message).join(", "));
     }
 
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+    passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
@@ -167,15 +183,15 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Inicio de sesión exitoso",
-          user: { 
-            id: user.id, 
+          user: {
+            id: user.id,
             username: user.username,
-            role: user.role 
+            nombreCompleto: user.nombreCompleto,
+            role: user.role
           },
         });
       });
-    };
-    passport.authenticate("local", cb)(req, res, next);
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {

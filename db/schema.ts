@@ -73,12 +73,13 @@ export const insertUserSchema = createInsertSchema(users).extend({
   username: z.string().email("Por favor ingresa un correo electrónico válido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   nombreCompleto: z.string().min(1, "El nombre completo es requerido"),
-  nombreEmpresa: z.string().min(1, "El nombre de la empresa es requerido"),
-  rutEmpresa: z.string().min(1, "El RUT de la empresa es requerido"),
-  email: z.string().email("Por favor ingresa un correo electrónico válido"),
+  nombreEmpresa: z.string().min(1, "El nombre de la empresa es requerido").default(""),
+  rutEmpresa: z.string().min(1, "El RUT de la empresa es requerido").default(""),
+  email: z.string().email("Por favor ingresa un correo electrónico válido").optional(),
   direccion: z.string().optional(),
   telefono: z.string().optional(),
-  role: z.enum([UserRole.CLIENTE, UserRole.ADMINISTRADOR, UserRole.EMPLEADO])
+  role: z.enum([UserRole.CLIENTE, UserRole.ADMINISTRADOR, UserRole.EMPLEADO]).default(UserRole.CLIENTE),
+  fechaRegistro: z.date().optional().default(() => new Date())
 });
 
 // Schema para inserción de recibos

@@ -229,15 +229,15 @@ export default function Dashboard() {
           <CardTitle>Distribución por Categorías</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="w-full h-[300px]">
+          <div className="w-full h-[400px] flex justify-center items-center">
             <ChartContainer config={{}}>
-              <PieChart>
+              <PieChart width={500} height={350}>
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
+                  labelLine={true}
+                  outerRadius={130}
                   fill="#8884d8"
                   dataKey="value"
                   nameKey="name"

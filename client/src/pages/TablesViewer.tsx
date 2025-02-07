@@ -18,6 +18,8 @@ export default function TablesViewer() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState({ username: "", password: "", nombreCompleto: "" });
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -77,6 +79,31 @@ export default function TablesViewer() {
       toast({ title: "Eliminación exitosa" });
     },
   });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (newUser: any) => {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al crear usuario');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: "Usuario creado exitosamente" });
+      setNewUser({ username: "", password: "", nombreCompleto: "" });
+      setIsCreatingUser(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
 
   if (!isAdmin) {
     return <div className="container mx-auto p-4">No tienes acceso a esta página.</div>;
@@ -175,6 +202,49 @@ export default function TablesViewer() {
                   ))}
                 </TableBody>
               </Table>
+
+              <Button 
+                className="mt-4"
+                onClick={() => setIsCreatingUser(true)}
+              >
+                Agregar Usuario
+              </Button>
+
+              <Dialog open={isCreatingUser} onOpenChange={setIsCreatingUser}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Correo Electrónico</Label>
+                      <Input
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                        type="email"
+                      />
+                    </div>
+                    <div>
+                      <Label>Contraseña</Label>
+                      <Input
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        type="password"
+                      />
+                    </div>
+                    <div>
+                      <Label>Nombre Completo</Label>
+                      <Input
+                        value={newUser.nombreCompleto}
+                        onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
+                      />
+                    </div>
+                    <Button onClick={() => createUserMutation.mutate(newUser)}>
+                      Crear Usuario
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="categories">

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import {
@@ -299,10 +300,10 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="p-4">ID</th>
-                  <th className="p-4">
+                  <th className="p-4 text-center">
                     <div className="space-y-2">
                       <div>Rango de Fecha</div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 justify-center">
                         <Input
                           type="date"
                           onChange={(e) => setFilters(prev => ({...prev, startDate: e.target.value}))}
@@ -323,11 +324,18 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Categoría</div>
-                      <Input
-                        placeholder="Filtrar categoría"
-                        onChange={(e) => setFilters(prev => ({...prev, category: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
+                      <Select onValueChange={(value) => setFilters(prev => ({...prev, category: value}))}>
+                        <SelectTrigger className="max-w-[150px]">
+                          <SelectValue placeholder="Filtrar categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Todas</SelectItem>
+                          <SelectItem value="Alimentación">Alimentación</SelectItem>
+                          <SelectItem value="Transporte">Transporte</SelectItem>
+                          <SelectItem value="Oficina">Oficina</SelectItem>
+                          <SelectItem value="Otros">Otros</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </th>
                   <th className="p-4">Monto</th>

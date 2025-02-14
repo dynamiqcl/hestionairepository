@@ -291,67 +291,30 @@ export default function Dashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
+                  <th className="p-4">ID</th>
                   <th className="p-4">
                     <div className="space-y-2">
-                      <div>ID</div>
-                      <Input
-                        placeholder="Filtrar ID"
-                        onChange={(e) => setFilters(prev => ({...prev, id: e.target.value}))}
-                        className="max-w-[100px]"
-                      />
+                      <div>Rango de Fecha</div>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          onChange={(e) => setFilters(prev => ({...prev, startDate: e.target.value}))}
+                          className="max-w-[150px]"
+                          placeholder="Desde"
+                        />
+                        <Input
+                          type="date"
+                          onChange={(e) => setFilters(prev => ({...prev, endDate: e.target.value}))}
+                          className="max-w-[150px]"
+                          placeholder="Hasta"
+                        />
+                      </div>
                     </div>
                   </th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Fecha</div>
-                      <Input
-                        type="date"
-                        onChange={(e) => setFilters(prev => ({...prev, date: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Empresa</div>
-                      <Input
-                        placeholder="Filtrar empresa"
-                        onChange={(e) => setFilters(prev => ({...prev, company: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Proveedor</div>
-                      <Input
-                        placeholder="Filtrar proveedor"
-                        onChange={(e) => setFilters(prev => ({...prev, vendor: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Categoría</div>
-                      <Input
-                        placeholder="Filtrar categoría"
-                        onChange={(e) => setFilters(prev => ({...prev, category: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Monto</div>
-                      <Input
-                        placeholder="Filtrar monto"
-                        type="number"
-                        onChange={(e) => setFilters(prev => ({...prev, total: e.target.value}))}
-                        className="max-w-[150px]"
-                      />
-                    </div>
-                  </th>
+                  <th className="p-4">Empresa</th>
+                  <th className="p-4">Proveedor</th>
+                  <th className="p-4">Categoría</th>
+                  <th className="p-4">Monto</th>
                   <th className="p-4 text-center">Acciones</th>
                 </tr>
               </thead>

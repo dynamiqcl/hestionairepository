@@ -86,7 +86,7 @@ export default function Dashboard() {
       isWithinDateRange &&
       (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
       (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (!filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase()))
+      (filters.category === 'all' || !filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase()))
     );
   });
   const { toast } = useToast();
@@ -329,7 +329,7 @@ export default function Dashboard() {
                           <SelectValue placeholder="Filtrar categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Todas</SelectItem>
+                          <SelectItem value="all">Todas</SelectItem>
                           <SelectItem value="Alimentación">Alimentación</SelectItem>
                           <SelectItem value="Transporte">Transporte</SelectItem>
                           <SelectItem value="Oficina">Oficina</SelectItem>

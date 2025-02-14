@@ -28,6 +28,14 @@ import {
 import { Plus, Pencil, Trash2, ArrowLeft, FileText, Download } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface Document {
   id: number;
@@ -40,11 +48,18 @@ interface Document {
   createdAt: string;
 }
 
+interface User {
+  id: number;
+  username: string;
+  nombreCompleto: string;
+}
+
 export default function DocumentManager() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
 
   // Fetch documents
   const { data: documents, isLoading } = useQuery<Document[]>({
@@ -57,7 +72,7 @@ export default function DocumentManager() {
   });
 
   // Fetch users for admin to select targets
-  const { data: users } = useQuery({
+  const { data: users } = useQuery<User[]>({
     queryKey: ["/api/users"],
     queryFn: async () => {
       const response = await fetch("/api/users");
@@ -92,11 +107,31 @@ export default function DocumentManager() {
     },
   });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLFormElement>) => {
+  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
+
+    // Agregar los usuarios seleccionados al FormData
+    formData.append("targetUsers", JSON.stringify(selectedUsers));
+
     uploadMutation.mutate(formData);
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/documents/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Error al eliminar documento");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Éxito",
+        description: "Documento eliminado correctamente",
+      });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -150,6 +185,32 @@ export default function DocumentManager() {
               </div>
 
               <div className="space-y-2">
+                <Label>Usuarios Asignados</Label>
+                <div className="flex flex-wrap gap-2">
+                  {users?.map((u) => (
+                    <Button
+                      key={u.id}
+                      type="button"
+                      variant={selectedUsers.includes(u.id) ? "default" : "outline"}
+                      className={cn(
+                        "text-sm",
+                        selectedUsers.includes(u.id) && "bg-primary text-primary-foreground"
+                      )}
+                      onClick={() => {
+                        setSelectedUsers((prev) =>
+                          prev.includes(u.id)
+                            ? prev.filter((id) => id !== u.id)
+                            : [...prev, u.id]
+                        );
+                      }}
+                    >
+                      {u.nombreCompleto}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="file">Archivo PDF</Label>
                 <Input
                   id="file"
@@ -168,7 +229,9 @@ export default function DocumentManager() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Subir Documento</Button>
+                <Button type="submit" disabled={selectedUsers.length === 0}>
+                  Subir Documento
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -235,9 +298,7 @@ export default function DocumentManager() {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => {
-                                    // Implementar eliminación
-                                  }}
+                                  onClick={() => deleteMutation.mutate(doc.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Eliminar

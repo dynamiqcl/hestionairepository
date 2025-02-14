@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye } from "lucide-react";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
+interface Document {
+  id: number;
+  name: string;
+  description: string;
+  fileUrl: string;
+  createdAt: string;
+}
 
 // Función para formatear montos en CLP
 const formatCLP = (amount: number) => {
@@ -133,6 +141,15 @@ export default function Dashboard() {
 
   // Colores para el gráfico
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  const { data: documents } = useQuery<Document[]>({
+    queryKey: ["/api/documents"],
+    queryFn: async () => {
+      const response = await fetch("/api/documents");
+      if (!response.ok) throw new Error("Error al obtener documentos");
+      return response.json();
+    },
+  });
 
   return (
     <div className="container mx-auto p-4 md:p-6">
@@ -277,7 +294,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>ID</div>
-                      <Input 
+                      <Input
                         placeholder="Filtrar ID"
                         onChange={(e) => setFilters(prev => ({...prev, id: e.target.value}))}
                         className="max-w-[100px]"
@@ -287,7 +304,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Fecha</div>
-                      <Input 
+                      <Input
                         type="date"
                         onChange={(e) => setFilters(prev => ({...prev, date: e.target.value}))}
                         className="max-w-[150px]"
@@ -297,7 +314,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Empresa</div>
-                      <Input 
+                      <Input
                         placeholder="Filtrar empresa"
                         onChange={(e) => setFilters(prev => ({...prev, company: e.target.value}))}
                         className="max-w-[150px]"
@@ -307,7 +324,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Proveedor</div>
-                      <Input 
+                      <Input
                         placeholder="Filtrar proveedor"
                         onChange={(e) => setFilters(prev => ({...prev, vendor: e.target.value}))}
                         className="max-w-[150px]"
@@ -317,7 +334,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Categoría</div>
-                      <Input 
+                      <Input
                         placeholder="Filtrar categoría"
                         onChange={(e) => setFilters(prev => ({...prev, category: e.target.value}))}
                         className="max-w-[150px]"
@@ -327,7 +344,7 @@ export default function Dashboard() {
                   <th className="p-4">
                     <div className="space-y-2">
                       <div>Monto</div>
-                      <Input 
+                      <Input
                         placeholder="Filtrar monto"
                         type="number"
                         onChange={(e) => setFilters(prev => ({...prev, total: e.target.value}))}
@@ -370,7 +387,7 @@ export default function Dashboard() {
                                     src={receipt.imageUrl}
                                     alt={`Boleta ${receipt.receiptId}`}
                                     className="object-contain w-full h-full max-h-[80vh]"
-                                    style={{ 
+                                    style={{
                                       maxWidth: '100%',
                                       margin: '0 auto',
                                       display: 'block'
@@ -433,6 +450,54 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Documentos Asignados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            {documents?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                No hay documentos asignados
+              </p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-4 text-left">Nombre</th>
+                    <th className="p-4 text-left">Descripción</th>
+                    <th className="p-4 text-left">Fecha</th>
+                    <th className="p-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents?.map((doc) => (
+                    <tr key={doc.id} className="border-b">
+                      <td className="p-4">{doc.name}</td>
+                      <td className="p-4">{doc.description}</td>
+                      <td className="p-4">
+                        {new Date(doc.createdAt).toLocaleDateString('es-ES')}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(doc.fileUrl, '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
       </Card>

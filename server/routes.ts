@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import express from "express";
 
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -63,6 +64,7 @@ const upload = multer({
 
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
   setupAuth(app);
 
   // Actualizar rol de administrador

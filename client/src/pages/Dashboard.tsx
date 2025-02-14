@@ -460,7 +460,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {documents?.length === 0 ? (
+            {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
                 No hay documentos asignados
               </p>
@@ -475,7 +475,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents?.map((doc) => (
+                  {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
                     <tr key={doc.id} className="border-b">
                       <td className="p-4">{doc.name}</td>
                       <td className="p-4">{doc.description}</td>

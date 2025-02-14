@@ -72,13 +72,20 @@ export default function Dashboard() {
   });
 
   const filteredReceipts = receipts?.filter(receipt => {
+    const receiptDate = new Date(receipt.date);
+    const startDate = filters.startDate ? new Date(filters.startDate) : null;
+    const endDate = filters.endDate ? new Date(filters.endDate) : null;
+
+    const isWithinDateRange = 
+      (!startDate || receiptDate >= startDate) &&
+      (!endDate || receiptDate <= endDate);
+
     return (
       (!filters.id || receipt.receiptId.toLowerCase().includes(filters.id.toLowerCase())) &&
-      (!filters.date || receipt.date.toString().includes(filters.date)) &&
+      isWithinDateRange &&
       (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
       (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (!filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase())) &&
-      (!filters.total || receipt.total.toString().includes(filters.total))
+      (!filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase()))
     );
   });
   const { toast } = useToast();
@@ -313,7 +320,16 @@ export default function Dashboard() {
                   </th>
                   <th className="p-4">Empresa</th>
                   <th className="p-4">Proveedor</th>
-                  <th className="p-4">Categoría</th>
+                  <th className="p-4">
+                    <div className="space-y-2">
+                      <div>Categoría</div>
+                      <Input
+                        placeholder="Filtrar categoría"
+                        onChange={(e) => setFilters(prev => ({...prev, category: e.target.value}))}
+                        className="max-w-[150px]"
+                      />
+                    </div>
+                  </th>
                   <th className="p-4">Monto</th>
                   <th className="p-4 text-center">Acciones</th>
                 </tr>

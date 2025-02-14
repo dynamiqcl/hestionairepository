@@ -1,9 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, users, UserRole, categories } from "@db/schema";
-import { desc, eq, and } from "drizzle-orm";
+import { receipts, companies, users, UserRole, categories, documents } from "@db/schema";
+import { desc, eq, and, sql } from "drizzle-orm";
 import { setupAuth } from "./auth";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -28,6 +31,35 @@ const ensureConsultorOrAdmin = (req: Express.Request, res: Express.Response, nex
   }
   next();
 };
+
+// Configuración de multer para almacenar archivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Solo se permiten archivos PDF"));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+});
 
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes
@@ -414,6 +446,93 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Rutas de documentos
+  app.get("/api/documents", ensureAuth, async (req, res) => {
+    try {
+      let query = db
+        .select({
+          id: documents.id,
+          name: documents.name,
+          description: documents.description,
+          fileUrl: documents.fileUrl,
+          uploadedBy: documents.uploadedBy,
+          targetUsers: documents.targetUsers,
+          isActive: documents.isActive,
+          createdAt: documents.createdAt,
+        })
+        .from(documents);
+
+      // Si no es admin, solo mostrar documentos dirigidos al usuario
+      if (req.user?.role !== UserRole.ADMINISTRADOR) {
+        query = query.where(sql`${documents.targetUsers} @> ${JSON.stringify([req.user?.id])}`);
+      }
+
+      const allDocuments = await query.orderBy(desc(documents.createdAt));
+      res.json(allDocuments);
+    } catch (error) {
+      console.error("Error al obtener documentos:", error);
+      res.status(500).json({ error: "Error al obtener documentos" });
+    }
+  });
+
+  app.post("/api/documents", ensureAuth, ensureAdmin, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });
+      }
+
+      const { name, description, targetUsers } = req.body;
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      const [newDocument] = await db
+        .insert(documents)
+        .values({
+          name,
+          description,
+          fileUrl,
+          uploadedBy: req.user!.id,
+          targetUsers: JSON.parse(targetUsers),
+          isActive: true,
+        })
+        .returning();
+
+      res.json(newDocument);
+    } catch (error) {
+      console.error("Error al crear documento:", error);
+      res.status(500).json({ error: "Error al crear documento" });
+    }
+  });
+
+  app.delete("/api/documents/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const [document] = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.id, parseInt(id)))
+        .limit(1);
+
+      if (!document) {
+        return res.status(404).json({ error: "Documento no encontrado" });
+      }
+
+      // Eliminar el archivo físico
+      const filePath = path.join(process.cwd(), document.fileUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      await db
+        .delete(documents)
+        .where(eq(documents.id, parseInt(id)));
+
+      res.json({ message: "Documento eliminado correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar documento:", error);
+      res.status(500).json({ error: "Error al eliminar documento" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, numeric, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, numeric, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -41,6 +41,18 @@ export const companies = pgTable("companies", {
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   rut: text("rut").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  targetUsers: jsonb("target_users").notNull().$type<number[]>(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -110,6 +122,10 @@ export const selectReceiptSchema = baseSelectSchema;
 export const insertCategorySchema = createInsertSchema(categories);
 export const selectCategorySchema = createSelectSchema(categories);
 
+// Add new schemas for documents
+export const insertDocumentSchema = createInsertSchema(documents);
+export const selectDocumentSchema = createSelectSchema(documents);
+
 // Types
 export type Receipt = typeof receipts.$inferSelect;
 export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
@@ -119,3 +135,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 // Tipos para categorías
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
+
+// Add new types for documents
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "./button";
 import { Link } from "wouter";
@@ -27,7 +26,7 @@ export function Navbar() {
               )}
             </Button>
           </div>
-          
+
           <div className="hidden md:flex md:items-center md:space-x-4">
             <Link href="/">
               <Button variant="ghost">Inicio</Button>
@@ -40,6 +39,9 @@ export function Navbar() {
             </Link>
             <Link href="/tables">
               <Button variant="ghost">Mantenedores</Button>
+            </Link>
+            <Link href="/documents"> {/* Added link for document management */}
+              <Button variant="ghost">Documentos</Button> {/* Added menu item */}
             </Link>
           </div>
 
@@ -76,6 +78,11 @@ export function Navbar() {
               <Button variant="ghost" className="w-full justify-start">
                 Empresas
               </Button>
+            </Link>
+            <Link href="/documents" onClick={() => setIsMenuOpen(false)}> {/* Added link for document management */}
+              <Button variant="ghost" className="w-full justify-start">
+                Documentos
+              </Button> {/* Added menu item */}
             </Link>
           </div>
         </div>

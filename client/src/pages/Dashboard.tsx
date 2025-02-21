@@ -49,6 +49,7 @@ interface Document {
   description: string;
   fileUrl: string;
   createdAt: string;
+  targetUsers: number[]; // Added targetUsers property
 }
 
 // Función para formatear montos en CLP
@@ -66,8 +67,8 @@ export default function Dashboard() {
   const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [filters, setFilters] = useState({
-    id: '',
-    date: '',
+    startDate: '',
+    endDate: '',
     company: '',
     vendor: '',
     category: '',
@@ -85,11 +86,10 @@ export default function Dashboard() {
       (!endDate || receiptDate <= endDate);
 
     return (
-      (!filters.id || receipt.receiptId.toLowerCase().includes(filters.id.toLowerCase())) &&
-      isWithinDateRange &&
       (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
       (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (filters.category === 'all' || !filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase()))
+      (filters.category === 'all' || !filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase())) &&
+      isWithinDateRange
     );
   });
   const { toast } = useToast();
@@ -97,6 +97,11 @@ export default function Dashboard() {
   const { data: companies } = useQuery({
     queryKey: ['/api/companies'],
   });
+
+  const { data: categories } = useQuery({ // Added categories query
+    queryKey: ['/api/categories'],
+  });
+
 
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,193 +318,236 @@ export default function Dashboard() {
           <CardTitle>Boletas Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <TableHeader> {/* Replaced table header */}
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={selectedReceipts.length > 0 && selectedReceipts.length === filteredReceipts?.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedReceipts(filteredReceipts?.map(r => r.id) || []);
-                        } else {
-                          setSelectedReceipts([]);
-                        }
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Proveedor</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody> {/* Replaced table body */}
-                {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
-                  <TableRow key={receipt.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedReceipts.includes(receipt.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedReceipts([...selectedReceipts, receipt.id]);
-                          } else {
-                            setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>{receipt.receiptId}</TableCell>
-                    <TableCell>{new Date(receipt.date).toLocaleDateString('es-ES')}</TableCell>
-                    <TableCell>{receipt.companyName || 'Sin empresa'}</TableCell>
-                    <TableCell>{receipt.vendor}</TableCell>
-                    <TableCell>{receipt.category || 'Sin categoría'}</TableCell>
-                    <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-center gap-2">
-                        {receipt.imageUrl && (
-                          <>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" title="Ver imagen">
-                                  <Eye className="h-4 w-4" />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Boletas Recientes</h2>
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex items-center space-x-2">
+                <Label>Desde:</Label>
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-auto"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label>Hasta:</Label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="w-auto"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label>Categoría:</Label>
+                <Select 
+                  value={filters.category}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Todas las categorías" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas</SelectItem>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex flex-col space-y-4">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <TableHeader> {/* Replaced table header */}
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={selectedReceipts.length > 0 && selectedReceipts.length === filteredReceipts?.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedReceipts(filteredReceipts?.map(r => r.id) || []);
+                            } else {
+                              setSelectedReceipts([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Proveedor</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody> {/* Replaced table body */}
+                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
+                      <TableRow key={receipt.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedReceipts.includes(receipt.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedReceipts([...selectedReceipts, receipt.id]);
+                              } else {
+                                setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{receipt.receiptId}</TableCell>
+                        <TableCell>{new Date(receipt.date).toLocaleDateString('es-ES')}</TableCell>
+                        <TableCell>{receipt.companyName || 'Sin empresa'}</TableCell>
+                        <TableCell>{receipt.vendor}</TableCell>
+                        <TableCell>{receipt.category || 'Sin categoría'}</TableCell>
+                        <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
+                        <TableCell>
+                          <div className="flex justify-center gap-2">
+                            {receipt.imageUrl && (
+                              <>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" title="Ver imagen">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                      <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="relative w-full aspect-[3/4]">
+                                      <img
+                                        src={receipt.imageUrl}
+                                        alt={`Boleta ${receipt.receiptId}`}
+                                        className="object-contain w-full h-full max-h-[80vh]"
+                                        style={{
+                                          maxWidth: '100%',
+                                          margin: '0 auto',
+                                          display: 'block'
+                                        }}
+                                        onError={(e) => {
+                                          console.error('Error loading image:', receipt.imageUrl);
+                                          e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                        }}
+                                      />
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const a = document.createElement('a');
+                                    a.href = receipt.imageUrl!;
+                                    a.download = `boleta-${receipt.receiptId}.jpg`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                  }}
+                                  title="Descargar imagen"
+                                >
+                                  <Download className="h-4 w-4" />
                                 </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl">
-                                <DialogHeader>
-                                  <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
-                                </DialogHeader>
-                                <div className="relative w-full aspect-[3/4]">
-                                  <img
-                                    src={receipt.imageUrl}
-                                    alt={`Boleta ${receipt.receiptId}`}
-                                    className="object-contain w-full h-full max-h-[80vh]"
-                                    style={{
-                                      maxWidth: '100%',
-                                      margin: '0 auto',
-                                      display: 'block'
-                                    }}
-                                    onError={(e) => {
-                                      console.error('Error loading image:', receipt.imageUrl);
-                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
-                                    }}
-                                  />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
+                              </>
+                            )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. Se eliminará permanentemente la boleta.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteReceipt(receipt.id)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                  >
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </table>
+              </div>
+              {selectedReceipts.length > 0 && ( // Added download button
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    onClick={handleDownloadMultiple}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Descargar {selectedReceipts.length} boletas seleccionadas
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Documentos Asignados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  No hay documentos asignados
+                </p>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-4 text-left">Nombre</th>
+                      <th className="p-4 text-left">Descripción</th>
+                      <th className="p-4 text-left">Fecha</th>
+                      <th className="p-4 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
+                      <tr key={doc.id} className="border-b">
+                        <td className="p-4">{doc.name}</td>
+                        <td className="p-4">{doc.description}</td>
+                        <td className="p-4">
+                          {new Date(doc.createdAt).toLocaleDateString('es-ES')}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-center gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                const a = document.createElement('a');
-                                a.href = receipt.imageUrl!;
-                                a.download = `boleta-${receipt.receiptId}.jpg`;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                              }}
-                              title="Descargar imagen"
+                              onClick={() => window.open(doc.fileUrl, '_blank')}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                          </>
-                        )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminará permanentemente la boleta.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteReceipt(receipt.id)}
-                                className="bg-red-500 hover:bg-red-600"
-                              >
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </table>
-          </div>
-          {selectedReceipts.length > 0 && ( // Added download button
-            <div className="mt-4 flex justify-end">
-              <Button
-                onClick={handleDownloadMultiple}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Descargar {selectedReceipts.length} boletas seleccionadas
-              </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Documentos Asignados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">
-                No hay documentos asignados
-              </p>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-4 text-left">Nombre</th>
-                    <th className="p-4 text-left">Descripción</th>
-                    <th className="p-4 text-left">Fecha</th>
-                    <th className="p-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
-                    <tr key={doc.id} className="border-b">
-                      <td className="p-4">{doc.name}</td>
-                      <td className="p-4">{doc.description}</td>
-                      <td className="p-4">
-                        {new Date(doc.createdAt).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(doc.fileUrl, '_blank')}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

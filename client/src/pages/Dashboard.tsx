@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,7 +20,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import {
   AlertDialog,
@@ -39,6 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"; // Import Table components
 
 
 interface Document {
@@ -71,13 +73,14 @@ export default function Dashboard() {
     category: '',
     total: ''
   });
+  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]); // Added state
 
   const filteredReceipts = receipts?.filter(receipt => {
     const receiptDate = new Date(receipt.date);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;
 
-    const isWithinDateRange = 
+    const isWithinDateRange =
       (!startDate || receiptDate >= startDate) &&
       (!endDate || receiptDate <= endDate);
 
@@ -158,6 +161,21 @@ export default function Dashboard() {
       return response.json();
     },
   });
+
+  const handleDownloadMultiple = () => { // Added function
+    selectedReceipts.forEach((receiptId) => {
+      const receipt = receipts?.find((r) => r.id === receiptId);
+      if (receipt?.imageUrl) {
+        const a = document.createElement('a');
+        a.href = receipt.imageUrl;
+        a.download = `boleta-${receipt.receiptId}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    });
+    setSelectedReceipts([]); // Limpiar selección después de descargar
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-6">
@@ -297,71 +315,57 @@ export default function Dashboard() {
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="p-4">ID</th>
-                  <th className="p-4 text-center">
-                    <div className="space-y-2">
-                      <div>Rango de Fecha</div>
-                      <div className="flex gap-2 justify-center">
-                        <Input
-                          type="date"
-                          onChange={(e) => setFilters(prev => ({...prev, startDate: e.target.value}))}
-                          className="max-w-[150px]"
-                          placeholder="Desde"
-                        />
-                        <Input
-                          type="date"
-                          onChange={(e) => setFilters(prev => ({...prev, endDate: e.target.value}))}
-                          className="max-w-[150px]"
-                          placeholder="Hasta"
-                        />
-                      </div>
-                    </div>
-                  </th>
-                  <th className="p-4">Empresa</th>
-                  <th className="p-4">Proveedor</th>
-                  <th className="p-4">
-                    <div className="space-y-2">
-                      <div>Categoría</div>
-                      <Select onValueChange={(value) => setFilters(prev => ({...prev, category: value}))}>
-                        <SelectTrigger className="max-w-[150px]">
-                          <SelectValue placeholder="Filtrar categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          <SelectItem value="Alimentación">Alimentación</SelectItem>
-                          <SelectItem value="Transporte">Transporte</SelectItem>
-                          <SelectItem value="Oficina">Oficina</SelectItem>
-                          <SelectItem value="Otros">Otros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </th>
-                  <th className="p-4">Monto</th>
-                  <th className="p-4 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
+              <TableHeader> {/* Replaced table header */}
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedReceipts.length > 0 && selectedReceipts.length === filteredReceipts?.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedReceipts(filteredReceipts?.map(r => r.id) || []);
+                        } else {
+                          setSelectedReceipts([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody> {/* Replaced table body */}
                 {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
-                  <tr key={receipt.id} className="border-b">
-                    <td className="p-4">{receipt.receiptId}</td>
-                    <td className="p-4">{new Date(receipt.date).toLocaleDateString('es-ES')}</td>
-                    <td className="p-4">{receipt.companyName || 'Sin empresa'}</td>
-                    <td className="p-4">{receipt.vendor}</td>
-                    <td className="p-4">{receipt.category || 'Sin categoría'}</td>
-                    <td className="p-4 text-right">{formatCLP(Number(receipt.total))}</td>
-                    <td className="p-4">
+                  <TableRow key={receipt.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedReceipts.includes(receipt.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedReceipts([...selectedReceipts, receipt.id]);
+                          } else {
+                            setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>{receipt.receiptId}</TableCell>
+                    <TableCell>{new Date(receipt.date).toLocaleDateString('es-ES')}</TableCell>
+                    <TableCell>{receipt.companyName || 'Sin empresa'}</TableCell>
+                    <TableCell>{receipt.vendor}</TableCell>
+                    <TableCell>{receipt.category || 'Sin categoría'}</TableCell>
+                    <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
+                    <TableCell>
                       <div className="flex justify-center gap-2">
                         {receipt.imageUrl && (
                           <>
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title="Ver imagen"
-                                >
+                                <Button variant="ghost" size="sm" title="Ver imagen">
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
@@ -406,10 +410,7 @@ export default function Dashboard() {
                         )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            >
+                            <Button variant="ghost" size="sm">
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </AlertDialogTrigger>
@@ -432,12 +433,23 @@ export default function Dashboard() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
             </table>
           </div>
+          {selectedReceipts.length > 0 && ( // Added download button
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={handleDownloadMultiple}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Descargar {selectedReceipts.length} boletas seleccionadas
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

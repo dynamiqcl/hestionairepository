@@ -40,8 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"; // Import Table components
-
+import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 interface Document {
   id: number;
@@ -49,7 +48,7 @@ interface Document {
   description: string;
   fileUrl: string;
   createdAt: string;
-  targetUsers: number[]; // Added targetUsers property
+  targetUsers: number[];
 }
 
 // Función para formatear montos en CLP
@@ -64,7 +63,7 @@ const formatCLP = (amount: number) => {
 export default function Dashboard() {
   const { data: receipts, isLoading, deleteReceipt } = useReceipts();
   const { user, logout, isAdmin } = useAuth();
-  const [newCompany, setNewCompany] = useState({ name: "", rut: "" });
+  const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [filters, setFilters] = useState({
     startDate: '',
@@ -74,7 +73,7 @@ export default function Dashboard() {
     category: '',
     total: ''
   });
-  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]); // Added state
+  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
 
   const filteredReceipts = receipts?.filter(receipt => {
     const receiptDate = new Date(receipt.date);
@@ -85,63 +84,24 @@ export default function Dashboard() {
       (!startDate || receiptDate >= startDate) &&
       (!endDate || receiptDate <= endDate);
 
-    return (
+    return isWithinDateRange &&
       (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
       (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (filters.category === 'all' || !filters.category || (receipt.category?.toLowerCase() || '').includes(filters.category.toLowerCase())) &&
-      isWithinDateRange
-    );
+      (!filters.category || receipt.category?.toLowerCase().includes(filters.category.toLowerCase()));
   });
-  const { toast } = useToast();
 
   const { data: companies } = useQuery({
     queryKey: ['/api/companies'],
   });
 
-  const { data: categories } = useQuery({ // Added categories query
+  const { data: categories } = useQuery({
     queryKey: ['/api/categories'],
   });
 
-
-  const handleCreateCompany = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/companies', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newCompany),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
-      }
-
-      toast({
-        title: "¡Éxito!",
-        description: "Empresa creada correctamente",
-      });
-
-      // Invalidar la cache para recargar las empresas
-      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
-      setNewCompany({ name: "", rut: "" });
-    } catch (error) {
-      console.error('Error al crear empresa:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error al crear empresa",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Calcular totales y datos para el gráfico usando los recibos filtrados
   const userFilteredReceipts = filteredReceipts?.filter(receipt => receipt.userId === user?.id) || [];
-  const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0) || 0;
-  const receiptCount = userFilteredReceipts.length || 0;
+  const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0);
+  const receiptCount = userFilteredReceipts.length;
 
   // Preparar datos para el gráfico de torta
   const pieChartData = userFilteredReceipts.reduce((acc: any[], receipt) => {
@@ -167,7 +127,7 @@ export default function Dashboard() {
     },
   });
 
-  const handleDownloadMultiple = () => { // Added function
+  const handleDownloadMultiple = () => {
     selectedReceipts.forEach((receiptId) => {
       const receipt = receipts?.find((r) => r.id === receiptId);
       if (receipt?.imageUrl) {
@@ -179,8 +139,16 @@ export default function Dashboard() {
         document.body.removeChild(a);
       }
     });
-    setSelectedReceipts([]); // Limpiar selección después de descargar
+    setSelectedReceipts([]);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6">
@@ -196,13 +164,10 @@ export default function Dashboard() {
             className="md:hidden"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
+
         <div className="hidden md:flex md:items-center md:space-x-4">
           <Link href="/upload">
             <Button variant="ghost">
@@ -210,7 +175,7 @@ export default function Dashboard() {
               Subir Boleta
             </Button>
           </Link>
-          <Link href="/companies"> {/* Reemplazo aquí */}
+          <Link href="/companies">
             <Button variant="ghost">
               <Plus className="w-4 h-4 mr-2" />
               Ir a Empresas
@@ -319,7 +284,6 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Boletas Recientes</h2>
             <div className="flex flex-wrap gap-4 mb-4">
               <div className="flex items-center space-x-2">
                 <Label>Desde:</Label>
@@ -361,7 +325,7 @@ export default function Dashboard() {
             <div className="flex flex-col space-y-4">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <TableHeader> {/* Replaced table header */}
+                  <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">
                         <Checkbox
@@ -384,7 +348,7 @@ export default function Dashboard() {
                       <TableHead className="text-center">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody> {/* Replaced table body */}
+                  <TableBody>
                     {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
                       <TableRow key={receipt.id}>
                         <TableCell>
@@ -485,7 +449,7 @@ export default function Dashboard() {
                   </TableBody>
                 </table>
               </div>
-              {selectedReceipts.length > 0 && ( // Added download button
+              {selectedReceipts.length > 0 && (
                 <div className="mt-4 flex justify-end">
                   <Button
                     onClick={handleDownloadMultiple}
@@ -497,57 +461,57 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Documentos Asignados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  No hay documentos asignados
-                </p>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="p-4 text-left">Nombre</th>
-                      <th className="p-4 text-left">Descripción</th>
-                      <th className="p-4 text-left">Fecha</th>
-                      <th className="p-4 text-center">Acciones</th>
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Documentos Asignados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                No hay documentos asignados
+              </p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-4 text-left">Nombre</th>
+                    <th className="p-4 text-left">Descripción</th>
+                    <th className="p-4 text-left">Fecha</th>
+                    <th className="p-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
+                    <tr key={doc.id} className="border-b">
+                      <td className="p-4">{doc.name}</td>
+                      <td className="p-4">{doc.description}</td>
+                      <td className="p-4">
+                        {new Date(doc.createdAt).toLocaleDateString('es-ES')}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(doc.fileUrl, '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
-                      <tr key={doc.id} className="border-b">
-                        <td className="p-4">{doc.name}</td>
-                        <td className="p-4">{doc.description}</td>
-                        <td className="p-4">
-                          {new Date(doc.createdAt).toLocaleDateString('es-ES')}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex justify-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(doc.fileUrl, '_blank')}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>iv>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

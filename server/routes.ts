@@ -36,6 +36,7 @@ const ensureConsultorOrAdmin = (req: Express.Request, res: Express.Response, nex
 // Configuración de multer para almacenar archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    // Asegurarse de que el directorio uploads existe
     const uploadDir = path.join(process.cwd(), "uploads");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -63,8 +64,14 @@ const upload = multer({
 });
 
 export function registerRoutes(app: Express): Server {
+  // Servir archivos estáticos
+  const uploadsPath = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsPath));
+
   // Setup authentication routes
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
   setupAuth(app);
 
   // Actualizar rol de administrador
@@ -323,7 +330,7 @@ export function registerRoutes(app: Express): Server {
         .orderBy(desc(receipts.id))
         .limit(1);
 
-      const nextId = lastReceipt.length > 0 
+      const nextId = lastReceipt.length > 0
         ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
         : "1";
 
@@ -459,7 +466,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Rutas de documentos
+  // Rutas de documentos  (moved from above)
   app.get("/api/documents", ensureAuth, async (req, res) => {
     try {
       let query = db

@@ -370,18 +370,19 @@ export default function Dashboard() {
                                   <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
                                 </DialogHeader>
                                 <div className="relative w-full aspect-[3/4]">
-                                  <img
-                                    src={receipt.imageUrl}
-                                    alt={`Boleta ${receipt.receiptId}`}
-                                    className="object-contain w-full h-full max-h-[80vh]"
-                                    style={{
-                                      maxWidth: '100%',
-                                      margin: '0 auto',
-                                      display: 'block'
-                                    }}
+                                  <object
+                                    data={receipt.imageUrl}
+                                    type="application/pdf"
+                                    width="100%"
+                                    height="600px"
+                                    className="object-contain"
                                     onError={(e) => {
-                                      console.error('Error loading image:', receipt.imageUrl);
-                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                      console.error('Error loading PDF:', receipt.imageUrl);
+                                      const img = document.createElement('img');
+                                      img.src = receipt.imageUrl!;
+                                      img.alt = `Boleta ${receipt.receiptId}`;
+                                      img.className = "object-contain w-full h-full max-h-[80vh]";
+                                      e.currentTarget.replaceWith(img);
                                     }}
                                   />
                                 </div>
@@ -391,14 +392,28 @@ export default function Dashboard() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                const a = document.createElement('a');
-                                a.href = receipt.imageUrl!;
-                                a.download = `boleta-${receipt.receiptId}.jpg`;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
+                                fetch(receipt.imageUrl!)
+                                  .then(response => response.blob())
+                                  .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `boleta-${receipt.receiptId}${receipt.imageUrl?.endsWith('.pdf') ? '.pdf' : '.jpg'}`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    document.body.removeChild(a);
+                                  })
+                                  .catch(error => {
+                                    console.error('Error downloading file:', error);
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Error",
+                                      description: "No se pudo descargar el archivo"
+                                    });
+                                  });
                               }}
-                              title="Descargar imagen"
+                              title="Descargar archivo"
                             >
                               <Download className="h-4 w-4" />
                             </Button>

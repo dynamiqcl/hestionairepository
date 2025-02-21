@@ -305,14 +305,14 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center space-x-2">
                 <Label>Categoría:</Label>
-                <Select 
+                <Select
                   value={filters.category}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas</SelectItem>
+                    <SelectItem value="todas">Todas las categorías</SelectItem>
                     {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}

@@ -316,13 +316,24 @@ export function registerRoutes(app: Express): Server {
         .where(eq(categories.name, req.body.category))
         .then(rows => rows[0]?.id);
 
+      // Obtener el último receiptId
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextId = lastReceipt.length > 0 
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
       const receiptData = {
         ...req.body,
         userId: req.user!.id,
         date: new Date(req.body.date),
         total: parseFloat(req.body.total.toString()),
         taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
-        receiptId: `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+        receiptId: nextId,
         categoryId
       };
 

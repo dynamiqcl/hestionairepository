@@ -106,10 +106,7 @@ export const insertReceiptSchema = baseInsertSchema.extend({
   ).optional(),
   rawText: z.string().optional(),
   imageUrl: z.string().optional(),
-  receiptId: z.string().default(() => {
-    const date = new Date();
-    return `RCT-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-  }),
+  receiptId: z.string(),
 });
 
 // Schema para selección de usuarios

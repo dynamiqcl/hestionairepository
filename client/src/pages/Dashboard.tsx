@@ -128,18 +128,31 @@ export default function Dashboard() {
   });
 
   const handleDownloadMultiple = () => {
-    selectedReceipts.forEach((receiptId) => {
-      const receipt = receipts?.find((r) => r.id === receiptId);
-      if (receipt?.imageUrl) {
-        const a = document.createElement('a');
-        a.href = receipt.imageUrl;
-        a.download = `boleta-${receipt.receiptId}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    });
-    setSelectedReceipts([]);
+    const selectedReceiptData = filteredReceipts?.filter(receipt => selectedReceipts.includes(receipt.id));
+
+    if (selectedReceiptData && selectedReceiptData.length > 0) {
+      import('xlsx').then(XLSX => {
+        const worksheet = XLSX.utils.json_to_sheet(selectedReceiptData.map(receipt => ({
+          ID: receipt.receiptId,
+          Fecha: new Date(receipt.date).toLocaleDateString('es-ES'),
+          Empresa: receipt.companyName || 'Sin empresa',
+          Proveedor: receipt.vendor,
+          Categoría: receipt.category || 'Sin categoría',
+          Total: receipt.total,
+        })));
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Boletas");
+
+        XLSX.writeFile(workbook, `boletas-${new Date().toISOString().split('T')[0]}.xlsx`);
+      });
+
+      toast({
+        title: "Excel generado",
+        description: `Se ha generado un Excel con ${selectedReceipts.length} boletas`,
+      });
+      setSelectedReceipts([]);
+    }
   };
 
   if (isLoading) {
@@ -371,53 +384,34 @@ export default function Dashboard() {
                         <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-2">
-                            {receipt.imageUrl && (
-                              <>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Ver imagen">
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                      <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="relative w-full aspect-[3/4]">
-                                      <img
-                                        src={receipt.imageUrl}
-                                        alt={`Boleta ${receipt.receiptId}`}
-                                        className="object-contain w-full h-full max-h-[80vh]"
-                                        style={{
-                                          maxWidth: '100%',
-                                          margin: '0 auto',
-                                          display: 'block'
-                                        }}
-                                        onError={(e) => {
-                                          console.error('Error loading image:', receipt.imageUrl);
-                                          e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
-                                        }}
-                                      />
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const a = document.createElement('a');
-                                    a.href = receipt.imageUrl!;
-                                    a.download = `boleta-${receipt.receiptId}.jpg`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                  }}
-                                  title="Descargar imagen"
-                                >
-                                  <Download className="h-4 w-4" />
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" title="Ver imagen">
+                                  <Eye className="h-4 w-4" />
                                 </Button>
-                              </>
-                            )}
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                  <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
+                                </DialogHeader>
+                                <div className="relative w-full aspect-[3/4]">
+                                  <img
+                                    src={receipt.imageUrl}
+                                    alt={`Boleta ${receipt.receiptId}`}
+                                    className="object-contain w-full h-full max-h-[80vh]"
+                                    style={{
+                                      maxWidth: '100%',
+                                      margin: '0 auto',
+                                      display: 'block'
+                                    }}
+                                    onError={(e) => {
+                                      console.error('Error loading image:', receipt.imageUrl);
+                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                    }}
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -456,7 +450,7 @@ export default function Dashboard() {
                     className="gap-2"
                   >
                     <Download className="h-4 w-4" />
-                    Descargar {selectedReceipts.length} boletas seleccionadas
+                    Descargar boletas seleccionadas como Excel
                   </Button>
                 </div>
               )}

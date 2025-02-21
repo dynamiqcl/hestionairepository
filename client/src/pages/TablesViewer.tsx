@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Download } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Navbar } from "@/components/ui/navbar";
 
@@ -20,6 +21,7 @@ export default function TablesViewer() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUser, setNewUser] = useState({ username: "", password: "", nombreCompleto: "" });
+  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -48,6 +50,25 @@ export default function TablesViewer() {
       return response.json();
     }
   });
+
+  const handleDownloadMultiple = () => {
+    selectedReceipts.forEach((receiptId) => {
+      const receipt = receipts?.find((r) => r.id === receiptId);
+      if (receipt?.imageUrl) {
+        const a = document.createElement('a');
+        a.href = receipt.imageUrl;
+        a.download = `boleta-${receipt.receiptId}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    });
+    setSelectedReceipts([]);
+    toast({
+      title: "Descarga iniciada",
+      description: `Se están descargando ${selectedReceipts.length} boletas`,
+    });
+  };
 
   const updateMutation = useMutation({
     mutationFn: async ({ type, item }: { type: string; item: any }) => {
@@ -96,7 +117,6 @@ export default function TablesViewer() {
       if (!newUser.nombreCompleto) {
         throw new Error('El nombre completo es requerido');
       }
-      
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,355 +148,390 @@ export default function TablesViewer() {
     <div>
       <Navbar />
       <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Mantenedor de Tablas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="users">
-            <TabsList>
-              <TabsTrigger value="users">Usuarios</TabsTrigger>
-              <TabsTrigger value="categories">Categorías</TabsTrigger>
-              <TabsTrigger value="receipts">Boletas</TabsTrigger>
-            </TabsList>
+        <Card>
+          <CardHeader>
+            <CardTitle>Mantenedor de Tablas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="users">
+              <TabsList>
+                <TabsTrigger value="users">Usuarios</TabsTrigger>
+                <TabsTrigger value="categories">Categorías</TabsTrigger>
+                <TabsTrigger value="receipts">Boletas</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="users">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Nombre Completo</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users?.map((user: any) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.id}</TableCell>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.nombreCompleto}</TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Editar Usuario</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={(e) => {
-                                e.preventDefault();
-                                updateMutation.mutate({ type: 'users', item: editingItem });
-                              }} className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="username">Username</Label>
-                                  <Input
-                                    id="username"
-                                    value={editingItem?.username}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      username: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="nombreCompleto">Nombre Completo</Label>
-                                  <Input
-                                    id="nombreCompleto"
-                                    value={editingItem?.nombreCompleto}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      nombreCompleto: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <Button type="submit">Guardar Cambios</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm('¿Estás seguro de eliminar este usuario?')) {
-                                deleteMutation.mutate({ type: 'users', id: user.id });
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <TabsContent value="users">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Nombre Completo</TableHead>
+                      <TableHead>Rol</TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users?.map((user: any) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.id}</TableCell>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.nombreCompleto}</TableCell>
+                        <TableCell>{user.role}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Editar Usuario</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={(e) => {
+                                  e.preventDefault();
+                                  updateMutation.mutate({ type: 'users', item: editingItem });
+                                }} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="username">Username</Label>
+                                    <Input
+                                      id="username"
+                                      value={editingItem?.username}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        username: e.target.value
+                                      })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="nombreCompleto">Nombre Completo</Label>
+                                    <Input
+                                      id="nombreCompleto"
+                                      value={editingItem?.nombreCompleto}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        nombreCompleto: e.target.value
+                                      })}
+                                    />
+                                  </div>
+                                  <Button type="submit">Guardar Cambios</Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('¿Estás seguro de eliminar este usuario?')) {
+                                  deleteMutation.mutate({ type: 'users', id: user.id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-              <Button 
-                className="mt-4"
-                onClick={() => setIsCreatingUser(true)}
-              >
-                Agregar Usuario
-              </Button>
+                <Button
+                  className="mt-4"
+                  onClick={() => setIsCreatingUser(true)}
+                >
+                  Agregar Usuario
+                </Button>
 
-              <Dialog open={isCreatingUser} onOpenChange={setIsCreatingUser}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Correo Electrónico</Label>
-                      <Input
-                        value={newUser.username}
-                        onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                        type="email"
-                      />
-                    </div>
-                    <div>
-                      <Label>Contraseña</Label>
-                      <Input
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                        type="password"
-                      />
-                    </div>
-                    <div>
-                      <Label>Nombre Completo</Label>
-                      <Input
-                        value={newUser.nombreCompleto}
-                        onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
-                      />
-                    </div>
-                    <Button onClick={() => createUserMutation.mutate(newUser)}>
-                      Crear Usuario
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </TabsContent>
-
-            <TabsContent value="categories">
-              <div className="mb-4">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button>Agregar Categoría</Button>
-                  </DialogTrigger>
+                <Dialog open={isCreatingUser} onOpenChange={setIsCreatingUser}>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Nueva Categoría</DialogTitle>
+                      <DialogTitle>Crear Nuevo Usuario</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      const newCategory = {
-                        name: formData.get('name'),
-                        description: formData.get('description')
-                      };
-                      fetch('/api/categories', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(newCategory)
-                      })
-                      .then(response => {
-                        if (!response.ok) throw new Error('Error al crear categoría');
-                        return response.json();
-                      })
-                      .then(() => {
-                        queryClient.invalidateQueries({ queryKey: ['categories'] });
-                        toast({ title: "Categoría creada exitosamente" });
-                      })
-                      .catch(error => {
-                        toast({ 
-                          title: "Error", 
-                          description: error.message,
-                          variant: "destructive"
-                        });
-                      });
-                    }} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input id="name" name="name" required />
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Correo Electrónico</Label>
+                        <Input
+                          value={newUser.username}
+                          onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                          type="email"
+                        />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Descripción</Label>
-                        <Input id="description" name="description" required />
+                      <div>
+                        <Label>Contraseña</Label>
+                        <Input
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                          type="password"
+                        />
                       </div>
-                      <Button type="submit">Crear Categoría</Button>
-                    </form>
+                      <div>
+                        <Label>Nombre Completo</Label>
+                        <Input
+                          value={newUser.nombreCompleto}
+                          onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
+                        />
+                      </div>
+                      <Button onClick={() => createUserMutation.mutate(newUser)}>
+                        Crear Usuario
+                      </Button>
+                    </div>
                   </DialogContent>
                 </Dialog>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories?.map((category: any) => (
-                    <TableRow key={category.id}>
-                      <TableCell>{category.id}</TableCell>
-                      <TableCell>{category.name}</TableCell>
-                      <TableCell>{category.description}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Editar Categoría</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={(e) => {
-                                e.preventDefault();
-                                updateMutation.mutate({ type: 'categories', item: editingItem });
-                              }} className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="name">Nombre</Label>
-                                  <Input
-                                    id="name"
-                                    value={editingItem?.name}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      name: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="description">Descripción</Label>
-                                  <Input
-                                    id="description"
-                                    value={editingItem?.description}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      description: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <Button type="submit">Guardar Cambios</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm('¿Estás seguro de eliminar esta categoría?')) {
-                                deleteMutation.mutate({ type: 'categories', id: category.id });
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="receipts">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Receipt ID</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receipts?.map((receipt: any) => (
-                    <TableRow key={receipt.id}>
-                      <TableCell>{receipt.id}</TableCell>
-                      <TableCell>{receipt.receiptId}</TableCell>
-                      <TableCell>{receipt.username}</TableCell>
-                      <TableCell>{new Date(receipt.date).toLocaleDateString()}</TableCell>
-                      <TableCell>${receipt.total}</TableCell>
-                      <TableCell>{receipt.vendor}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Editar Boleta</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={(e) => {
-                                e.preventDefault();
-                                updateMutation.mutate({ type: 'receipts', item: editingItem });
-                              }} className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="vendor">Vendedor</Label>
-                                  <Input
-                                    id="vendor"
-                                    value={editingItem?.vendor}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      vendor: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="total">Total</Label>
-                                  <Input
-                                    id="total"
-                                    type="number"
-                                    value={editingItem?.total}
-                                    onChange={(e) => setEditingItem({
-                                      ...editingItem,
-                                      total: parseFloat(e.target.value)
-                                    })}
-                                  />
-                                </div>
-                                <Button type="submit">Guardar Cambios</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm('¿Estás seguro de eliminar esta boleta?')) {
-                                deleteMutation.mutate({ type: 'receipts', id: receipt.id });
+              <TabsContent value="categories">
+                <div className="mb-4">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>Agregar Categoría</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Nueva Categoría</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.currentTarget);
+                        const newCategory = {
+                          name: formData.get('name'),
+                          description: formData.get('description')
+                        };
+                        fetch('/api/categories', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify(newCategory)
+                        })
+                        .then(response => {
+                          if (!response.ok) throw new Error('Error al crear categoría');
+                          return response.json();
+                        })
+                        .then(() => {
+                          queryClient.invalidateQueries({ queryKey: ['categories'] });
+                          toast({ title: "Categoría creada exitosamente" });
+                        })
+                        .catch(error => {
+                          toast({ 
+                            title: "Error", 
+                            description: error.message,
+                            variant: "destructive"
+                          });
+                        });
+                      }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nombre</Label>
+                          <Input id="name" name="name" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Descripción</Label>
+                          <Input id="description" name="description" required />
+                        </div>
+                        <Button type="submit">Crear Categoría</Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories?.map((category: any) => (
+                      <TableRow key={category.id}>
+                        <TableCell>{category.id}</TableCell>
+                        <TableCell>{category.name}</TableCell>
+                        <TableCell>{category.description}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Editar Categoría</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={(e) => {
+                                  e.preventDefault();
+                                  updateMutation.mutate({ type: 'categories', item: editingItem });
+                                }} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="name">Nombre</Label>
+                                    <Input
+                                      id="name"
+                                      value={editingItem?.name}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        name: e.target.value
+                                      })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="description">Descripción</Label>
+                                    <Input
+                                      id="description"
+                                      value={editingItem?.description}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        description: e.target.value
+                                      })}
+                                    />
+                                  </div>
+                                  <Button type="submit">Guardar Cambios</Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('¿Estás seguro de eliminar esta categoría?')) {
+                                  deleteMutation.mutate({ type: 'categories', id: category.id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+
+              <TabsContent value="receipts">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={selectedReceipts.length > 0 && selectedReceipts.length === receipts?.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedReceipts(receipts?.map(r => r.id) || []);
+                            } else {
+                              setSelectedReceipts([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Receipt ID</TableHead>
+                      <TableHead>Usuario</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Vendedor</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receipts?.map((receipt: any) => (
+                      <TableRow key={receipt.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedReceipts.includes(receipt.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedReceipts([...selectedReceipts, receipt.id]);
+                              } else {
+                                setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
                               }
                             }}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                          />
+                        </TableCell>
+                        <TableCell>{receipt.id}</TableCell>
+                        <TableCell>{receipt.receiptId}</TableCell>
+                        <TableCell>{receipt.username}</TableCell>
+                        <TableCell>{new Date(receipt.date).toLocaleDateString()}</TableCell>
+                        <TableCell>${receipt.total}</TableCell>
+                        <TableCell>{receipt.vendor}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Editar Boleta</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={(e) => {
+                                  e.preventDefault();
+                                  updateMutation.mutate({ type: 'receipts', item: editingItem });
+                                }} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="vendor">Vendedor</Label>
+                                    <Input
+                                      id="vendor"
+                                      value={editingItem?.vendor}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        vendor: e.target.value
+                                      })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="total">Total</Label>
+                                    <Input
+                                      id="total"
+                                      type="number"
+                                      value={editingItem?.total}
+                                      onChange={(e) => setEditingItem({
+                                        ...editingItem,
+                                        total: parseFloat(e.target.value)
+                                      })}
+                                    />
+                                  </div>
+                                  <Button type="submit">Guardar Cambios</Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('¿Estás seguro de eliminar esta boleta?')) {
+                                  deleteMutation.mutate({ type: 'receipts', id: receipt.id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {selectedReceipts.length > 0 && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      onClick={handleDownloadMultiple}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Descargar {selectedReceipts.length} boletas seleccionadas
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

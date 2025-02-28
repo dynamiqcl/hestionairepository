@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CompanyManager() {
   const [, setLocation] = useLocation();
@@ -18,11 +19,22 @@ export default function CompanyManager() {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
-  const [newCompany, setNewCompany] = useState({ name: "", rut: "", direccion: "" }); // Added direccion
-  const { user } = useAuth(); // Assuming useAuth provides user role
+  const [newCompany, setNewCompany] = useState({ name: "", rut: "", direccion: "", userId: "" });
+  const { user } = useAuth();
+
+  // Redirigir si no es administrador
+  if (user?.role !== 'ADMINISTRADOR') {
+    setLocation("/");
+    return null;
+  }
 
   const { data: companies } = useQuery({
     queryKey: ['/api/companies'],
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ['/api/users'],
+    enabled: user?.role === 'ADMINISTRADOR',
   });
 
   const handleCreateCompany = async (e: React.FormEvent) => {
@@ -39,7 +51,7 @@ export default function CompanyManager() {
 
       toast({ title: "¡Éxito!", description: "Empresa creada correctamente" });
       queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
-      setNewCompany({ name: "", rut: "", direccion: "" }); // Added direccion
+      setNewCompany({ name: "", rut: "", direccion: "", userId: "" });
       setIsCreating(false);
     } catch (error) {
       toast({
@@ -103,14 +115,12 @@ export default function CompanyManager() {
             <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">Mis Empresas</h1>
+            <h1 className="text-2xl font-bold">Gestión de Empresas</h1>
           </div>
-          {user?.role === 'ADMINISTRADOR' && ( //Conditional rendering for admin only
-            <Button onClick={() => setIsCreating(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Empresa
-            </Button>
-          )}
+          <Button onClick={() => setIsCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Empresa
+          </Button>
         </div>
 
         <Card>
@@ -124,16 +134,20 @@ export default function CompanyManager() {
                   <tr className="border-b">
                     <th className="p-4 text-left">Nombre</th>
                     <th className="p-4 text-left">RUT</th>
-                    <th className="p-4 text-left">Dirección</th> {/* Added Address column */}
+                    <th className="p-4 text-left">Dirección</th>
+                    <th className="p-4 text-left">Usuario Asignado</th>
                     <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {companies?.map((company) => (
+                  {companies?.map((company: any) => (
                     <tr key={company.id} className="border-b">
                       <td className="p-4">{company.name}</td>
                       <td className="p-4">{company.rut}</td>
-                      <td className="p-4">{company.direccion}</td> {/* Added Address display */}
+                      <td className="p-4">{company.direccion}</td>
+                      <td className="p-4">
+                        {users?.find(u => u.id === company.userId)?.nombreCompleto || 'No asignado'}
+                      </td>
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
                           <Button
@@ -205,7 +219,7 @@ export default function CompanyManager() {
                   required
                 />
               </div>
-              <div className="space-y-2"> {/* Added address field */}
+              <div className="space-y-2">
                 <Label htmlFor="direccion">Dirección</Label>
                 <Input
                   id="direccion"
@@ -213,6 +227,24 @@ export default function CompanyManager() {
                   onChange={(e) => setNewCompany({ ...newCompany, direccion: e.target.value })}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userId">Usuario Asignado</Label>
+                <Select
+                  value={newCompany.userId}
+                  onValueChange={(value) => setNewCompany({ ...newCompany, userId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users?.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.nombreCompleto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="submit">Crear Empresa</Button>
@@ -250,7 +282,7 @@ export default function CompanyManager() {
                     required
                   />
                 </div>
-                <div className="space-y-2"> {/* Added address field to edit dialog */}
+                <div className="space-y-2">
                   <Label htmlFor="edit-direccion">Dirección</Label>
                   <Input
                     id="edit-direccion"
@@ -258,6 +290,24 @@ export default function CompanyManager() {
                     onChange={(e) => setEditingCompany({ ...editingCompany, direccion: e.target.value })}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-userId">Usuario Asignado</Label>
+                  <Select
+                    value={editingCompany.userId?.toString()}
+                    onValueChange={(value) => setEditingCompany({ ...editingCompany, userId: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un usuario" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users?.map((user: any) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.nombreCompleto}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="submit">Guardar Cambios</Button>

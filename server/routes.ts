@@ -183,12 +183,11 @@ export function registerRoutes(app: Express): Server {
 
 
   // Rutas de empresas
-  app.get("/api/companies", ensureAuth, async (req, res) => {
+  app.get("/api/companies", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const userCompanies = await db
         .select()
-        .from(companies)
-        .where(eq(companies.userId, req.user!.id));
+        .from(companies);
       res.json(userCompanies);
     } catch (error) {
       console.error("Error al obtener empresas:", error);
@@ -231,18 +230,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/companies/:id", ensureAuth, async (req, res) => {
+  app.delete("/api/companies/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const { id } = req.params;
 
-      // Verify company belongs to user
+      // Verify company exists
       const [existingCompany] = await db
         .select()
         .from(companies)
-        .where(and(
-          eq(companies.id, parseInt(id)),
-          eq(companies.userId, req.user!.id)
-        ))
+        .where(eq(companies.id, parseInt(id)))
         .limit(1);
 
       if (!existingCompany) {

@@ -41,11 +41,20 @@ export const companies = pgTable("companies", {
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   rut: text("rut").notNull(),
-  direccion: text("direccion"),
+  direccion: text("direccion").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Add company schemas
+export const insertCompanySchema = createInsertSchema(companies).extend({
+  name: z.string().min(1, "El nombre de la empresa es requerido"),
+  rut: z.string().min(1, "El RUT es requerido"),
+  direccion: z.string().min(1, "La dirección es requerida"),
+});
+
+export const selectCompanySchema = createSelectSchema(companies);
 
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
@@ -137,3 +146,7 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 // Add new types for documents
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+// Add company types
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;

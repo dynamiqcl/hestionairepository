@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, users, UserRole, categories, documents } from "@db/schema";
+import { receipts, companies, users, UserRole, categories, documents, insertUserSchema } from "@db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import multer from "multer";

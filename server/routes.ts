@@ -8,6 +8,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
+import crypto from 'crypto'; // Add crypto import
 
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -142,15 +143,37 @@ export function registerRoutes(app: Express): Server {
   // Crear nuevo usuario (solo admin)
   app.post("/api/users", ensureAuth, ensureAdmin, async (req, res) => {
     try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res
+          .status(400)
+          .send("Datos inválidos: " + result.error.issues.map(i => i.message).join(", "));
+      }
+
+      // Hash the password before saving
+      const hashedPassword = await crypto.hash(result.data.password);
+
       const userData = {
-        ...req.body,
+        ...result.data,
+        password: hashedPassword,
         fechaRegistro: new Date(),
       };
 
       const [newUser] = await db
         .insert(users)
         .values(userData)
-        .returning();
+        .returning({
+          id: users.id,
+          username: users.username,
+          nombreCompleto: users.nombreCompleto,
+          nombreEmpresa: users.nombreEmpresa,
+          rutEmpresa: users.rutEmpresa,
+          email: users.email,
+          direccion: users.direccion,
+          telefono: users.telefono,
+          role: users.role,
+          fechaRegistro: users.fechaRegistro,
+        });
 
       res.json(newUser);
     } catch (error) {

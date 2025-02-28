@@ -178,17 +178,40 @@ export default function ReceiptUpload() {
   };
 
   const handleSave = async (receipt: ReceiptData) => {
-    if (!receipt.editedData || !receipt.preview) return;
+    if (!receipt.editedData || !receipt.file) return;
 
     try {
-      const receiptToSave = {
-        ...receipt.editedData,
-        date: receipt.editedData.date instanceof Date ? receipt.editedData.date.toISOString() : new Date(receipt.editedData.date).toISOString(),
-        rawText: receipt.extractedData?.vendor || "",
-        imageUrl: receipt.preview
-      };
+      // Crear FormData para enviar la imagen
+      const formData = new FormData();
+      formData.append('image', receipt.file);
 
-      await addReceipt(receiptToSave);
+      // Agregar los demás datos del recibo
+      Object.entries(receipt.editedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          if (value instanceof Date) {
+            formData.append(key, value.toISOString());
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+
+      if (receipt.extractedData?.vendor) {
+        formData.append('rawText', receipt.extractedData.vendor);
+      }
+
+      // Enviar la solicitud al servidor
+      const response = await fetch('/api/receipts', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      await addReceipt(await response.json());
 
       toast({
         title: "¡Éxito!",

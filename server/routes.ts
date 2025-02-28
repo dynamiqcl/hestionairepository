@@ -11,6 +11,28 @@ import express from "express";
 import { randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 
+// Configuración de multer para almacenar las imágenes de las boletas
+const receiptStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), "uploads", "receipts");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadReceipt = multer({
+  storage: receiptStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
   if (req.isAuthenticated()) {
@@ -148,8 +170,8 @@ export function registerRoutes(app: Express): Server {
 
       // Validaciones básicas
       if (!username || !password || !nombreCompleto) {
-        return res.status(400).json({ 
-          error: "Faltan campos requeridos (username, password, nombreCompleto)" 
+        return res.status(400).json({
+          error: "Faltan campos requeridos (username, password, nombreCompleto)"
         });
       }
 
@@ -241,12 +263,12 @@ export function registerRoutes(app: Express): Server {
 
       const [updatedCompany] = await db
         .update(companies)
-        .set({ 
-          name, 
-          rut, 
+        .set({
+          name,
+          rut,
           direccion,
           userId: userId || existingCompany.userId, // Allow reassigning to different user
-          updatedAt: new Date() 
+          updatedAt: new Date()
         })
         .where(eq(companies.id, parseInt(id)))
         .returning();
@@ -342,9 +364,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/receipts", ensureAuth, async (req, res) => {
+  // Nueva ruta para subir boletas con imágenes
+  app.post("/api/receipts", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
       const date = new Date();
+
+      // Obtener el categoryId basado en el nombre de la categoría
       const categoryId = await db
         .select({ id: categories.id })
         .from(categories)
@@ -362,14 +387,26 @@ export function registerRoutes(app: Express): Server {
         ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
         : "1";
 
+      // Construir la URL de la imagen
+      let imageUrl = null;
+      if (req.file) {
+        imageUrl = `/uploads/receipts/${req.file.filename}`;
+      } else if (req.body.imageUrl) {
+        // Si se proporciona una URL de imagen directamente
+        imageUrl = req.body.imageUrl;
+      }
+
       const receiptData = {
-        ...req.body,
         userId: req.user!.id,
         date: new Date(req.body.date),
         total: parseFloat(req.body.total.toString()),
+        vendor: req.body.vendor,
         taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
         receiptId: nextId,
-        categoryId
+        categoryId,
+        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
+        rawText: req.body.rawText || "",
+        imageUrl
       };
 
       const [newReceipt] = await db

@@ -8,7 +8,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
-import { randomBytes, pbkdf2Sync } from 'crypto';
+import { randomBytes, scrypt } from 'crypto';
+import { promisify } from 'util';
 
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -151,7 +152,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Hash the password before saving
-      const hashedPassword = hashPassword(result.data.password);
+      const hashedPassword = await hashPassword(result.data.password);
 
       const userData = {
         ...result.data,
@@ -578,10 +579,11 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Función para hacer hash de la contraseña
-  function hashPassword(password: string): string {
-    const salt = randomBytes(16).toString('hex');
-    const hash = pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return `${hash}.${salt}`;
+  async function hashPassword(password: string): Promise<string> {
+    // Usar la misma función de hash que en auth.ts
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await promisify(scrypt)(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
   }
 
   const httpServer = createServer(app);

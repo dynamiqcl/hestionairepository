@@ -196,19 +196,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/companies/:id", ensureAuth, async (req, res) => {
+  app.put("/api/companies/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, rut } = req.body;
+      const { name, rut, direccion, userId } = req.body;
 
-      // Verify company belongs to user
+      // Verify company exists (admin can edit any company)
       const [existingCompany] = await db
         .select()
         .from(companies)
-        .where(and(
-          eq(companies.id, parseInt(id)),
-          eq(companies.userId, req.user!.id)
-        ))
+        .where(eq(companies.id, parseInt(id)))
         .limit(1);
 
       if (!existingCompany) {
@@ -217,7 +214,13 @@ export function registerRoutes(app: Express): Server {
 
       const [updatedCompany] = await db
         .update(companies)
-        .set({ name, rut, updatedAt: new Date() })
+        .set({ 
+          name, 
+          rut, 
+          direccion,
+          userId: userId || existingCompany.userId, // Allow reassigning to different user
+          updatedAt: new Date() 
+        })
         .where(eq(companies.id, parseInt(id)))
         .returning();
 
@@ -257,15 +260,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/companies", ensureAuth, async (req, res) => {
+  app.post("/api/companies", ensureAuth, ensureAdmin, async (req, res) => {
     try {
-      const { name, rut } = req.body;
+      const { name, rut, direccion, userId } = req.body;
       const [newCompany] = await db
         .insert(companies)
         .values({
           name,
           rut,
-          userId: req.user!.id,
+          direccion,
+          userId: userId || req.user!.id, // Allow assigning to other users
         })
         .returning();
       res.json(newCompany);

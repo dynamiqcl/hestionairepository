@@ -41,6 +41,7 @@ export const companies = pgTable("companies", {
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   rut: text("rut").notNull(),
+  direccion: text("direccion"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

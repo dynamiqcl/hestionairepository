@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, users, UserRole, categories, documents, insertUserSchema } from "@db/schema";
+import { receipts, companies, users, UserRole, categories, documents } from "@db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import multer from "multer";
@@ -144,41 +144,45 @@ export function registerRoutes(app: Express): Server {
   // Crear nuevo usuario (solo admin)
   app.post("/api/users", ensureAuth, ensureAdmin, async (req, res) => {
     try {
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .send("Datos inválidos: " + result.error.issues.map(i => i.message).join(", "));
+      const { username, password, nombreCompleto, role } = req.body;
+
+      // Validaciones básicas
+      if (!username || !password || !nombreCompleto) {
+        return res.status(400).json({ 
+          error: "Faltan campos requeridos (username, password, nombreCompleto)" 
+        });
       }
 
-      // Hash the password before saving
-      const hashedPassword = await hashPassword(result.data.password);
-
-      const userData = {
-        ...result.data,
-        password: hashedPassword,
-        fechaRegistro: new Date(),
-      };
+      // Hash simple de la contraseña
+      const salt = randomBytes(16).toString("hex");
+      const buf = (await promisify(scrypt)(password, salt, 64)) as Buffer;
+      const hashedPassword = `${buf.toString("hex")}.${salt}`;
 
       const [newUser] = await db
         .insert(users)
-        .values(userData)
+        .values({
+          username,
+          password: hashedPassword,
+          nombreCompleto,
+          role: role || UserRole.CLIENTE,
+          nombreEmpresa: req.body.nombreEmpresa || "",
+          rutEmpresa: req.body.rutEmpresa || "",
+          email: username,
+          direccion: req.body.direccion || "",
+          telefono: req.body.telefono || "",
+          fechaRegistro: new Date(),
+        })
         .returning({
           id: users.id,
           username: users.username,
           nombreCompleto: users.nombreCompleto,
-          nombreEmpresa: users.nombreEmpresa,
-          rutEmpresa: users.rutEmpresa,
-          email: users.email,
-          direccion: users.direccion,
-          telefono: users.telefono,
           role: users.role,
           fechaRegistro: users.fechaRegistro,
         });
 
       res.json(newUser);
     } catch (error) {
-      console.error("Error al crear usuario:", error);
+      console.error("Error detallado al crear usuario:", error);
       res.status(500).json({ error: "Error al crear usuario" });
     }
   });
@@ -577,14 +581,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Error al eliminar documento" });
     }
   });
-
-  // Función para hacer hash de la contraseña
-  async function hashPassword(password: string): Promise<string> {
-    // Usar la misma función de hash que en auth.ts
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await promisify(scrypt)(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  }
 
   const httpServer = createServer(app);
   return httpServer;

@@ -330,7 +330,7 @@ export default function ReceiptUpload() {
                         {companies?.map((company) => (
                           <SelectItem key={company.id} value={company.id.toString()}>
                             {company.name}
-                          </SelectItem>
+                          </SelectItem>/SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

@@ -46,11 +46,11 @@ interface ReceiptData {
   isProcessing: boolean;
   validation: ValidationResult | null;
   extractedData: ExtractedData | null;
-  editedData: (ExtractedData & { companyId?: number }) | null;
+  editedData: (ExtractedData & { companyId?: number; description?: string }) | null;
 }
 
 function useCategories() {
-  return useQuery<{ id: number, name: string }[]>({
+  return useQuery<{ id: number, name: string, description: string }[]>({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await fetch('/api/categories');
@@ -337,14 +337,56 @@ export default function ReceiptUpload() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`date-${receipt.id}`}>
-                      Fecha
-                      {receipt.validation && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          (Confianza: {Math.round(receipt.validation.confidence.date * 100)}%)
-                        </span>
-                      )}
-                    </Label>
+                    <Label htmlFor={`category-${receipt.id}`}>Categoría</Label>
+                    <Select
+                      value={receipt.editedData.category}
+                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              category: value
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories?.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name} - {category.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`description-${receipt.id}`}>Descripción</Label>
+                    <Input
+                      id={`description-${receipt.id}`}
+                      value={receipt.editedData.description || ''}
+                      onChange={(e) => setReceipts(prev => prev.map(r => {
+                        if (r.id === receipt.id && r.editedData) {
+                          return {
+                            ...r,
+                            editedData: {
+                              ...r.editedData,
+                              description: e.target.value
+                            }
+                          };
+                        }
+                        return r;
+                      }))}
+                      placeholder="Ingrese una descripción"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`date-${receipt.id}`}>Fecha del documento</Label>
                     <Input
                       id={`date-${receipt.id}`}
                       type="date"
@@ -363,28 +405,21 @@ export default function ReceiptUpload() {
                       }))}
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor={`total-${receipt.id}`}>
-                      Monto Total (CLP)
-                      {receipt.validation && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          (Confianza: {Math.round(receipt.validation.confidence.amount * 100)}%)
-                        </span>
-                      )}
-                    </Label>
+                    <Label htmlFor={`total-${receipt.id}`}>Monto Total sin IVA</Label>
                     <Input
                       id={`total-${receipt.id}`}
                       type="number"
                       value={receipt.editedData.total}
                       onChange={(e) => setReceipts(prev => prev.map(r => {
                         if (r.id === receipt.id && r.editedData) {
+                          const value = parseFloat(e.target.value);
                           return {
                             ...r,
                             editedData: {
                               ...r.editedData,
-                              total: parseInt(e.target.value, 10),
-                              taxAmount: Math.round(parseInt(e.target.value, 10) * 0.19)
+                              total: value,
+                              taxAmount: value * 0.19
                             }
                           };
                         }
@@ -420,42 +455,6 @@ export default function ReceiptUpload() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`category-${receipt.id}`}>
-                      Categoría
-                      {receipt.validation && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          (Confianza: {Math.round(receipt.validation.confidence.category * 100)}%)
-                        </span>
-                      )}
-                    </Label>
-                    <Select
-                      value={receipt.editedData.category}
-                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.editedData,
-                              category: value
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`tax-${receipt.id}`}>IVA Estimado (19%)</Label>

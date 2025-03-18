@@ -428,42 +428,7 @@ export default function ReceiptUpload() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`vendor-${receipt.id}`}>
-                      Proveedor
-                      {receipt.validation && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          (Confianza: {Math.round(receipt.validation.confidence.vendor * 100)}%)
-                        </span>
-                      )}
-                    </Label>
-                    <Input
-                      id={`vendor-${receipt.id}`}
-                      value={receipt.editedData.vendor}
-                      onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.editedData,
-                              vendor: e.target.value
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    />
-                  </div>
-
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`tax-${receipt.id}`}>IVA Estimado (19%)</Label>
-                    <Input
-                      id={`tax-${receipt.id}`}
-                      type="number"
-                      value={receipt.editedData.taxAmount}
-                      disabled
-                    />
+                  
                   </div>
 
                   <div className="flex justify-end">

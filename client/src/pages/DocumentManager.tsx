@@ -199,8 +199,7 @@ export default function DocumentManager() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>iv>
-
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea
@@ -209,7 +208,6 @@ export default function DocumentManager() {
                   placeholder="Descripción del documento..."
                 />
               </div>
-
               <div className="space-y-2">
                 <Label>Usuarios Asignados</Label>
                 <div className="flex flex-wrap gap-2">
@@ -235,7 +233,6 @@ export default function DocumentManager() {
                   ))}
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="file">Archivo PDF</Label>
                 <Input
@@ -246,7 +243,6 @@ export default function DocumentManager() {
                   required
                 />
               </div>
-
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"

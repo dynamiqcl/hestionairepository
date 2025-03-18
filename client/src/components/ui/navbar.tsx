@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "./button";
 import { Link } from "wouter";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, Bell } from "lucide-react";
 import * as React from "react";
 
 export function Navbar() {
@@ -40,13 +40,16 @@ export function Navbar() {
             <Link href="/tables">
               <Button variant="ghost">Mantenedores</Button>
             </Link>
-            <Link href="/documents"> {/* Added link for document management */}
-              <Button variant="ghost">Documentos</Button> {/* Added menu item */}
+            <Link href="/documents">
+              <Button variant="ghost">Documentos</Button>
             </Link>
           </div>
 
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={logout}>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => logout()}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -56,7 +59,7 @@ export function Navbar() {
         <div
           className={`${
             isMenuOpen ? "block" : "hidden"
-          } absolute left-0 right-0 top-16 bg-background border-b md:hidden`}
+          } absolute left-0 right-0 top-16 bg-white border-b md:hidden`}
         >
           <div className="flex flex-col space-y-2 p-4">
             <Link href="/" onClick={() => setIsMenuOpen(false)}>
@@ -79,10 +82,10 @@ export function Navbar() {
                 Empresas
               </Button>
             </Link>
-            <Link href="/documents" onClick={() => setIsMenuOpen(false)}> {/* Added link for document management */}
+            <Link href="/documents" onClick={() => setIsMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start">
                 Documentos
-              </Button> {/* Added menu item */}
+              </Button>
             </Link>
           </div>
         </div>

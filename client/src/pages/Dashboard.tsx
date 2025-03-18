@@ -73,6 +73,7 @@ export default function Dashboard() {
     category: '',
     total: ''
   });
+  const [selectedDocCategory, setSelectedDocCategory] = useState("");
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
 
   const filteredReceipts = receipts?.filter(receipt => {
@@ -468,10 +469,34 @@ export default function Dashboard() {
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Documentos Asignados</CardTitle>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDocCategory("")}
+              className={!selectedDocCategory ? "bg-primary text-primary-foreground" : ""}
+            >
+              Todos
+            </Button>
+            {categories?.map((category) => (
+              <Button
+                key={category.id}
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDocCategory(category.name)}
+                className={selectedDocCategory === category.name ? "bg-primary text-primary-foreground" : ""}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
+            {documents?.filter(doc => 
+              doc.targetUsers.includes(user?.id) && 
+              (!selectedDocCategory || doc.category === selectedDocCategory)
+            )?.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
                 No hay documentos asignados
               </p>
@@ -486,7 +511,10 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.map((doc) => (
+                  {documents?.filter(doc => 
+                    doc.targetUsers.includes(user?.id) && 
+                    (!selectedDocCategory || doc.category === selectedDocCategory)
+                  )?.map((doc) => (
                     <tr key={doc.id} className="border-b">
                       <td className="p-4">{doc.name}</td>
                       <td className="p-4">{doc.description}</td>

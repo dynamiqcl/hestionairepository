@@ -274,6 +274,20 @@ export default function TablesViewer() {
                           onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
                         />
                       </div>
+                      <div>
+                        <Label>Dirección</Label>
+                        <Input
+                          value={newUser.direccion}
+                          onChange={(e) => setNewUser({...newUser, direccion: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label>Teléfono</Label>
+                        <Input
+                          value={newUser.telefono}
+                          onChange={(e) => setNewUser({...newUser, telefono: e.target.value})}
+                        />
+                      </div>
                       <Button onClick={() => createUserMutation.mutate(newUser)}>
                         Crear Usuario
                       </Button>

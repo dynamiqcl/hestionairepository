@@ -11,6 +11,7 @@ import CategoryManager from "./pages/CategoryManager";
 import TablesViewer from "@/pages/TablesViewer";
 import CompanyManager from "@/pages/CompanyManager";
 import DocumentManager from "./pages/DocumentManager";
+import { Layout } from "@/components/layout/Layout";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -28,7 +29,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={ReceiptUpload} />
@@ -37,7 +38,7 @@ function AppContent() {
         <Route path="/companies" component={CompanyManager} />
         <Route path="/documents" component={DocumentManager} />
       </Switch>
-    </div>
+    </Layout>
   );
 }
 

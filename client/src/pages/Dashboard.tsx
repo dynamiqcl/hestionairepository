@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Menu, X } from "lucide-react";
+import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,23 +34,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-
-interface Document {
-  id: number;
-  name: string;
-  description: string;
-  fileUrl: string;
-  createdAt: string;
-  targetUsers: number[];
-}
 
 // Función para formatear montos en CLP
 const formatCLP = (amount: number) => {
@@ -65,6 +49,7 @@ export default function Dashboard() {
   const { user, logout, isAdmin } = useAuth();
   const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -74,6 +59,23 @@ export default function Dashboard() {
     total: ''
   });
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
+
+  // Queries
+  const { data: companies } = useQuery({
+    queryKey: ['/api/companies'],
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['/api/categories'],
+  });
+
+  const { data: documentCategories } = useQuery({
+    queryKey: ['/api/document-categories'],
+  });
+
+  const { data: documents } = useQuery({
+    queryKey: ["/api/documents"],
+  });
 
   const filteredReceipts = receipts?.filter(receipt => {
     const receiptDate = new Date(receipt.date);
@@ -85,17 +87,9 @@ export default function Dashboard() {
       (!endDate || receiptDate <= endDate);
 
     return isWithinDateRange &&
-      (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
+      (!filters.company || ((receipt as any).companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
       (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (!filters.category || receipt.category?.toLowerCase().includes(filters.category.toLowerCase()));
-  });
-
-  const { data: companies } = useQuery({
-    queryKey: ['/api/companies'],
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: ['/api/categories'],
+      (!filters.category || ((receipt as any).category?.toLowerCase() || '').includes(filters.category.toLowerCase()));
   });
 
   // Calcular totales y datos para el gráfico usando los recibos filtrados
@@ -105,7 +99,7 @@ export default function Dashboard() {
 
   // Preparar datos para el gráfico de torta
   const pieChartData = userFilteredReceipts.reduce((acc: any[], receipt) => {
-    const category = receipt.category || 'Sin categoría';
+    const category = (receipt as any).category || 'Sin categoría';
     const existingCategory = acc.find(item => item.name === category);
     if (existingCategory) {
       existingCategory.value += Number(receipt.total);
@@ -118,15 +112,6 @@ export default function Dashboard() {
   // Colores para el gráfico
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-  const { data: documents } = useQuery<Document[]>({
-    queryKey: ["/api/documents"],
-    queryFn: async () => {
-      const response = await fetch("/api/documents");
-      if (!response.ok) throw new Error("Error al obtener documentos");
-      return response.json();
-    },
-  });
-
   const handleDownloadMultiple = () => {
     const selectedReceiptData = filteredReceipts?.filter(receipt => selectedReceipts.includes(receipt.id));
 
@@ -135,9 +120,9 @@ export default function Dashboard() {
         const worksheet = XLSX.utils.json_to_sheet(selectedReceiptData.map(receipt => ({
           ID: receipt.receiptId,
           Fecha: new Date(receipt.date).toLocaleDateString('es-ES'),
-          Empresa: receipt.companyName || 'Sin empresa',
+          Empresa: (receipt as any).companyName || 'Sin empresa',
           Proveedor: receipt.vendor,
-          Categoría: receipt.category || 'Sin categoría',
+          Categoría: (receipt as any).category || 'Sin categoría',
           Total: receipt.total,
         })));
 
@@ -490,8 +475,8 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {documents?.filter(doc => 
-              doc.targetUsers.includes(user?.id) && 
+            {documents?.filter(doc =>
+              doc.targetUsers.includes(user?.id) &&
               (!selectedCategory || doc.categoryId === selectedCategory)
             )?.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">

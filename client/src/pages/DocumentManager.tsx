@@ -60,6 +60,17 @@ export default function DocumentManager() {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  // Fetch categories
+  const { data: categories } = useQuery({
+    queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const response = await fetch("/api/categories");
+      if (!response.ok) throw new Error("Error al obtener categorías");
+      return response.json();
+    },
+  });
 
   // Fetch documents
   const { data: documents, isLoading } = useQuery<Document[]>({
@@ -174,6 +185,27 @@ export default function DocumentManager() {
                   required
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoría</Label>
+                <Select
+                  id="category"
+                  name="category"
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>iv>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>

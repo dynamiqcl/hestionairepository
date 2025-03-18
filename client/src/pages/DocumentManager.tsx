@@ -205,7 +205,7 @@ export default function DocumentManager() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>iv>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>

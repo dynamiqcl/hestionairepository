@@ -182,6 +182,12 @@ export default function Dashboard() {
         </div>
 
         <div className="hidden md:flex md:items-center md:space-x-4">
+          <Link href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank">
+            <Button variant="ghost">
+              <FileText className="w-4 h-4 mr-2" />
+              Carpeta Tributaria SII
+            </Button>
+          </Link>
           <Link href="/upload">
             <Button variant="ghost">
               <Receipt className="w-4 h-4 mr-2" />

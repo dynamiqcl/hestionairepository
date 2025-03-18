@@ -1,545 +1,83 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useReceipts } from "@/hooks/use-receipts";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye, FileText } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Menu, X } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-
-interface Document {
-  id: number;
-  name: string;
-  description: string;
-  fileUrl: string;
-  createdAt: string;
-  targetUsers: number[];
-}
-
-// Función para formatear montos en CLP
-const formatCLP = (amount: number) => {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    maximumFractionDigits: 0
-  }).format(amount);
-};
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FileText, DollarSign, Building2, BarChart3 } from "lucide-react"
+import { useDocuments } from "@/hooks/use-documents"
+import { useReceipts } from "@/hooks/use-receipts"
+import { useCompanies } from "@/hooks/use-companies"
 
 export default function Dashboard() {
-  const { data: receipts, isLoading, deleteReceipt } = useReceipts();
-  const { user, logout, isAdmin } = useAuth();
-  const { toast } = useToast();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
-    company: '',
-    vendor: '',
-    category: '',
-    total: ''
-  });
-  const [selectedDocCategory, setSelectedDocCategory] = useState("");
-  const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
+  const { data: documents } = useDocuments()
+  const { data: receipts } = useReceipts()
+  const { data: companies } = useCompanies()
 
-  const filteredReceipts = receipts?.filter(receipt => {
-    const receiptDate = new Date(receipt.date);
-    const startDate = filters.startDate ? new Date(filters.startDate) : null;
-    const endDate = filters.endDate ? new Date(filters.endDate) : null;
-
-    const isWithinDateRange =
-      (!startDate || receiptDate >= startDate) &&
-      (!endDate || receiptDate <= endDate);
-
-    return isWithinDateRange &&
-      (!filters.company || (receipt.companyName?.toLowerCase() || '').includes(filters.company.toLowerCase())) &&
-      (!filters.vendor || (receipt.vendor?.toLowerCase() || '').includes(filters.vendor.toLowerCase())) &&
-      (!filters.category || receipt.category?.toLowerCase().includes(filters.category.toLowerCase()));
-  });
-
-  const { data: companies } = useQuery({
-    queryKey: ['/api/companies'],
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: ['/api/categories'],
-  });
-
-  // Calcular totales y datos para el gráfico usando los recibos filtrados
-  const userFilteredReceipts = filteredReceipts?.filter(receipt => receipt.userId === user?.id) || [];
-  const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0);
-  const receiptCount = userFilteredReceipts.length;
-
-  // Preparar datos para el gráfico de torta
-  const pieChartData = userFilteredReceipts.reduce((acc: any[], receipt) => {
-    const category = receipt.category || 'Sin categoría';
-    const existingCategory = acc.find(item => item.name === category);
-    if (existingCategory) {
-      existingCategory.value += Number(receipt.total);
-    } else {
-      acc.push({ name: category, value: Number(receipt.total) });
-    }
-    return acc;
-  }, []);
-
-  // Colores para el gráfico
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-  const { data: documents } = useQuery<Document[]>({
-    queryKey: ["/api/documents"],
-    queryFn: async () => {
-      const response = await fetch("/api/documents");
-      if (!response.ok) throw new Error("Error al obtener documentos");
-      return response.json();
+  const stats = [
+    {
+      title: "Documentos Totales",
+      value: documents?.length || 0,
+      icon: <FileText className="h-6 w-6" />,
+      color: "bg-purple-100 text-purple-600",
     },
-  });
-
-  const handleDownloadMultiple = () => {
-    const selectedReceiptData = filteredReceipts?.filter(receipt => selectedReceipts.includes(receipt.id));
-
-    if (selectedReceiptData && selectedReceiptData.length > 0) {
-      import('xlsx').then(XLSX => {
-        const worksheet = XLSX.utils.json_to_sheet(selectedReceiptData.map(receipt => ({
-          ID: receipt.receiptId,
-          Fecha: new Date(receipt.date).toLocaleDateString('es-ES'),
-          Empresa: receipt.companyName || 'Sin empresa',
-          Proveedor: receipt.vendor,
-          Categoría: receipt.category || 'Sin categoría',
-          Total: receipt.total,
-        })));
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Boletas");
-
-        XLSX.writeFile(workbook, `boletas-${new Date().toISOString().split('T')[0]}.xlsx`);
-      });
-
-      toast({
-        title: "Excel generado",
-        description: `Se ha generado un Excel con ${selectedReceipts.length} boletas`,
-      });
-      setSelectedReceipts([]);
+    {
+      title: "Recibos Procesados",
+      value: receipts?.length || 0,
+      icon: <DollarSign className="h-6 w-6" />,
+      color: "bg-blue-100 text-blue-600", 
+    },
+    {
+      title: "Empresas Registradas",
+      value: companies?.length || 0,
+      icon: <Building2 className="h-6 w-6" />,
+      color: "bg-green-100 text-green-600",
+    },
+    {
+      title: "Análisis Pendientes",
+      value: "12",
+      icon: <BarChart3 className="h-6 w-6" />,
+      color: "bg-orange-100 text-orange-600",
     }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  ]
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <div className="flex items-center w-full justify-between md:w-auto">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-bold">Panel de Rendiciones</h1>
-            <p className="text-muted-foreground">Bienvenido, {user?.nombreCompleto || user?.username}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        <div className="hidden md:flex md:items-center md:space-x-4">
-          <a href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost">
-              <FileText className="w-4 h-4 mr-2" />
-              Carpeta Tributaria SII
-            </Button>
-          </a>
-          <Link href="/upload">
-            <Button variant="ghost">
-              <Receipt className="w-4 h-4 mr-2" />
-              Subir Boleta
-            </Button>
-          </Link>
-          <Link href="/companies">
-            <Button variant="ghost">
-              <Plus className="w-4 h-4 mr-2" />
-              Ir a Empresas
-            </Button>
-          </Link>
-          {isAdmin && (
-            <Link href="/tables">
-              <Button variant="ghost">
-                <Settings className="w-4 h-4 mr-2" />
-                Mantenedores
-              </Button>
-            </Link>
-          )}
-          <Button variant="ghost" onClick={() => logout()}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Salir
-          </Button>
-        </div>
-
-        {/* Mobile menu */}
-        <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:hidden flex-col w-full space-y-2`}>
-          <Link href="/upload">
-            <Button variant="ghost" className="w-full justify-start">
-              <Receipt className="w-4 h-4 mr-2" />
-              Subir Boleta
-            </Button>
-          </Link>
-          <Link href="/tables">
-            <Button variant="ghost" className="w-full justify-start">
-              <Settings className="w-4 h-4 mr-2" />
-              Mantenedores
-            </Button>
-          </Link>
-          <Button variant="ghost" className="w-full justify-start" onClick={() => logout()}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Salir
-          </Button>
-        </div>
+    <div className="p-6">
+      <div className="page-header">
+        <h1 className="page-title">Dashboard</h1>
+        <p className="text-muted-foreground">Bienvenido a tu panel de control</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="dashboard-stats">
+        {stats.map((stat) => (
+          <Card key={stat.title}>
+            <CardContent className="stat-card">
+              <div className={`stat-icon ${stat.color}`}>
+                {stat.icon}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">{stat.title}</p>
+                <h3 className="text-2xl font-semibold">{stat.value}</h3>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Gastos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Actividad Reciente</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCLP(totalAmount)}</div>
+            {/* Aquí irá el contenido de actividad reciente */}
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Boletas Procesadas</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Estadísticas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{receiptCount}</div>
+            {/* Aquí irán las estadísticas */}
           </CardContent>
         </Card>
       </div>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Distribución por Categorías</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full h-[400px] flex justify-center items-center">
-            <ResponsiveContainer width="100%" height={400}>
-              <ChartContainer config={{}}>
-                <PieChart>
-                  {pieChartData && pieChartData.length > 0 ? (
-                    <>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        outerRadius={120}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, value }) => `${name}: ${formatCLP(value)}`}
-                      >
-                        {pieChartData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Legend />
-                    </>
-                  ) : (
-                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                      No hay datos para mostrar
-                    </text>
-                  )}
-                </PieChart>
-              </ChartContainer>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Boletas Recientes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex items-center space-x-2">
-                <Label>Desde:</Label>
-                <Input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="w-auto"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Label>Hasta:</Label>
-                <Input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="w-auto"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Label>Categoría:</Label>
-                <Select
-                  value={filters.category}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Todas las categorías" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas las categorías</SelectItem>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex flex-col space-y-4">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">
-                        <Checkbox
-                          checked={selectedReceipts.length > 0 && selectedReceipts.length === filteredReceipts?.length}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedReceipts(filteredReceipts?.map(r => r.id) || []);
-                            } else {
-                              setSelectedReceipts([]);
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Proveedor</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead className="text-center">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
-                      <TableRow key={receipt.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedReceipts.includes(receipt.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedReceipts([...selectedReceipts, receipt.id]);
-                              } else {
-                                setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{receipt.receiptId}</TableCell>
-                        <TableCell>{new Date(receipt.date).toLocaleDateString('es-ES')}</TableCell>
-                        <TableCell>{receipt.companyName || 'Sin empresa'}</TableCell>
-                        <TableCell>{receipt.vendor}</TableCell>
-                        <TableCell>{receipt.category || 'Sin categoría'}</TableCell>
-                        <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
-                        <TableCell>
-                          <div className="flex justify-center gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" title="Ver imagen">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl">
-                                <DialogHeader>
-                                  <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
-                                </DialogHeader>
-                                <div className="relative w-full aspect-[3/4]">
-                                  <img
-                                    src={receipt.imageUrl}
-                                    alt={`Boleta ${receipt.receiptId}`}
-                                    className="object-contain w-full h-full max-h-[80vh]"
-                                    style={{
-                                      maxWidth: '100%',
-                                      margin: '0 auto',
-                                      display: 'block'
-                                    }}
-                                    onError={(e) => {
-                                      console.error('Error loading image:', receipt.imageUrl);
-                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
-                                    }}
-                                  />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Se eliminará permanentemente la boleta.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteReceipt(receipt.id)}
-                                    className="bg-red-500 hover:bg-red-600"
-                                  >
-                                    Eliminar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </table>
-              </div>
-              {selectedReceipts.length > 0 && (
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    onClick={handleDownloadMultiple}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Descargar boletas seleccionadas como Excel
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Documentos Asignados</CardTitle>
-          <div className="flex flex-wrap gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedDocCategory("")}
-              className={!selectedDocCategory ? "bg-primary text-primary-foreground" : ""}
-            >
-              Todos
-            </Button>
-            {categories?.map((category) => (
-              <Button
-                key={category.id}
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedDocCategory(category.name)}
-                className={selectedDocCategory === category.name ? "bg-primary text-primary-foreground" : ""}
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            {documents?.filter(doc => 
-              doc.targetUsers.includes(user?.id) && 
-              (!selectedDocCategory || doc.category === selectedDocCategory)
-            )?.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">
-                No hay documentos asignados
-              </p>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-4 text-left">Nombre</th>
-                    <th className="p-4 text-left">Descripción</th>
-                    <th className="p-4 text-left">Fecha</th>
-                    <th className="p-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents?.filter(doc => 
-                    doc.targetUsers.includes(user?.id) && 
-                    (!selectedDocCategory || doc.category === selectedDocCategory)
-                  )?.map((doc) => (
-                    <tr key={doc.id} className="border-b">
-                      <td className="p-4">{doc.name}</td>
-                      <td className="p-4">{doc.description}</td>
-                      <td className="p-4">
-                        {new Date(doc.createdAt).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(doc.fileUrl, '_blank')}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
-  );
+  )
 }

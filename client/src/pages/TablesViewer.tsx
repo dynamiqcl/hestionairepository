@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2, Download } from "lucide-react";
+import { Pencil, Trash2, Download, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,8 +20,9 @@ export default function TablesViewer() {
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ username: "", password: "", nombreCompleto: "" });
+  const [newUser, setNewUser] = useState({ username: "", password: "", nombreCompleto: "", direccion: "", telefono: "" });
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -131,7 +132,7 @@ export default function TablesViewer() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ title: "Usuario creado exitosamente" });
-      setNewUser({ username: "", password: "", nombreCompleto: "" });
+      setNewUser({ username: "", password: "", nombreCompleto: "", direccion: "", telefono: "" });
       setIsCreatingUser(false);
     },
     onError: (error) => {
@@ -161,139 +162,163 @@ export default function TablesViewer() {
               </TabsList>
 
               <TabsContent value="users">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Nombre Completo</TableHead>
-                      <TableHead>Rol</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users?.map((user: any) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.id}</TableCell>
-                        <TableCell>{user.username}</TableCell>
-                        <TableCell>{user.nombreCompleto}</TableCell>
-                        <TableCell>{user.role}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Editar Usuario</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={(e) => {
-                                  e.preventDefault();
-                                  updateMutation.mutate({ type: 'users', item: editingItem });
-                                }} className="space-y-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="username">Username</Label>
-                                    <Input
-                                      id="username"
-                                      value={editingItem?.username}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        username: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="nombreCompleto">Nombre Completo</Label>
-                                    <Input
-                                      id="nombreCompleto"
-                                      value={editingItem?.nombreCompleto}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        nombreCompleto: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <Button type="submit">Guardar Cambios</Button>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm('¿Estás seguro de eliminar este usuario?')) {
-                                  deleteMutation.mutate({ type: 'users', id: user.id });
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="p-6">
+                  <div className="page-header">
+                    <h1 className="page-title">Usuarios</h1>
+                    <p className="text-muted-foreground">Gestiona y visualiza a los usuarios</p>
+                  </div>
+                  <Card className="data-table">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                      <CardTitle>Usuarios</CardTitle>
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar..."
+                            className="pl-8"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                        <Button>Exportar</Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Username</TableHead>
+                            <TableHead>Nombre Completo</TableHead>
+                            <TableHead>Rol</TableHead>
+                            <TableHead>Acciones</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {users?.map((user: any) => (
+                            <TableRow key={user.id}>
+                              <TableCell>{user.id}</TableCell>
+                              <TableCell>{user.username}</TableCell>
+                              <TableCell>{user.nombreCompleto}</TableCell>
+                              <TableCell>{user.role}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Editar Usuario</DialogTitle>
+                                      </DialogHeader>
+                                      <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        updateMutation.mutate({ type: 'users', item: editingItem });
+                                      }} className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label htmlFor="username">Username</Label>
+                                          <Input
+                                            id="username"
+                                            value={editingItem?.username}
+                                            onChange={(e) => setEditingItem({
+                                              ...editingItem,
+                                              username: e.target.value
+                                            })}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="nombreCompleto">Nombre Completo</Label>
+                                          <Input
+                                            id="nombreCompleto"
+                                            value={editingItem?.nombreCompleto}
+                                            onChange={(e) => setEditingItem({
+                                              ...editingItem,
+                                              nombreCompleto: e.target.value
+                                            })}
+                                          />
+                                        </div>
+                                        <Button type="submit">Guardar Cambios</Button>
+                                      </form>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm('¿Estás seguro de eliminar este usuario?')) {
+                                        deleteMutation.mutate({ type: 'users', id: user.id });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                  <Button
+                    className="mt-4"
+                    onClick={() => setIsCreatingUser(true)}
+                  >
+                    Agregar Usuario
+                  </Button>
 
-                <Button
-                  className="mt-4"
-                  onClick={() => setIsCreatingUser(true)}
-                >
-                  Agregar Usuario
-                </Button>
-
-                <Dialog open={isCreatingUser} onOpenChange={setIsCreatingUser}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Correo Electrónico</Label>
-                        <Input
-                          value={newUser.username}
-                          onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                          type="email"
-                        />
+                  <Dialog open={isCreatingUser} onOpenChange={setIsCreatingUser}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Correo Electrónico</Label>
+                          <Input
+                            value={newUser.username}
+                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                            type="email"
+                          />
+                        </div>
+                        <div>
+                          <Label>Contraseña</Label>
+                          <Input
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                            type="password"
+                          />
+                        </div>
+                        <div>
+                          <Label>Nombre Completo</Label>
+                          <Input
+                            value={newUser.nombreCompleto}
+                            onChange={(e) => setNewUser({ ...newUser, nombreCompleto: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Dirección</Label>
+                          <Input
+                            value={newUser.direccion}
+                            onChange={(e) => setNewUser({ ...newUser, direccion: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Teléfono</Label>
+                          <Input
+                            value={newUser.telefono}
+                            onChange={(e) => setNewUser({ ...newUser, telefono: e.target.value })}
+                          />
+                        </div>
+                        <Button onClick={() => createUserMutation.mutate(newUser)}>
+                          Crear Usuario
+                        </Button>
                       </div>
-                      <div>
-                        <Label>Contraseña</Label>
-                        <Input
-                          value={newUser.password}
-                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                          type="password"
-                        />
-                      </div>
-                      <div>
-                        <Label>Nombre Completo</Label>
-                        <Input
-                          value={newUser.nombreCompleto}
-                          onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Dirección</Label>
-                        <Input
-                          value={newUser.direccion}
-                          onChange={(e) => setNewUser({...newUser, direccion: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Teléfono</Label>
-                        <Input
-                          value={newUser.telefono}
-                          onChange={(e) => setNewUser({...newUser, telefono: e.target.value})}
-                        />
-                      </div>
-                      <Button onClick={() => createUserMutation.mutate(newUser)}>
-                        Crear Usuario
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </TabsContent>
 
               <TabsContent value="categories">
@@ -320,21 +345,21 @@ export default function TablesViewer() {
                           },
                           body: JSON.stringify(newCategory)
                         })
-                        .then(response => {
-                          if (!response.ok) throw new Error('Error al crear categoría');
-                          return response.json();
-                        })
-                        .then(() => {
-                          queryClient.invalidateQueries({ queryKey: ['categories'] });
-                          toast({ title: "Categoría creada exitosamente" });
-                        })
-                        .catch(error => {
-                          toast({ 
-                            title: "Error", 
-                            description: error.message,
-                            variant: "destructive"
+                          .then(response => {
+                            if (!response.ok) throw new Error('Error al crear categoría');
+                            return response.json();
+                          })
+                          .then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['categories'] });
+                            toast({ title: "Categoría creada exitosamente" });
+                          })
+                          .catch(error => {
+                            toast({
+                              title: "Error",
+                              description: error.message,
+                              variant: "destructive"
+                            });
                           });
-                        });
                       }} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="name">Nombre</Label>

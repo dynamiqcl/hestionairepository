@@ -56,20 +56,11 @@ export const insertCompanySchema = createInsertSchema(companies).extend({
 
 export const selectCompanySchema = createSelectSchema(companies);
 
-export const documentCategories = pgTable("document_categories", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   fileUrl: text("file_url").notNull(),
-  categoryId: integer("category_id").references(() => documentCategories.id),
   uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
   targetUsers: jsonb("target_users").notNull().$type<number[]>(),
   isActive: boolean("is_active").default(true),

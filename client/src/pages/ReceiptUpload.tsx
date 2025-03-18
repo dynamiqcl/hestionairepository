@@ -327,10 +327,10 @@ export default function ReceiptUpload() {
                         <SelectValue placeholder="Selecciona una empresa" />
                       </SelectTrigger>
                       <SelectContent>
-                        {companies?.map((company) => (
+                        {companies?.map((company: any) => (
                           <SelectItem key={company.id} value={company.id.toString()}>
                             {company.name}
-                          </SelectItem>/SelectItem>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -365,6 +365,7 @@ export default function ReceiptUpload() {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor={`description-${receipt.id}`}>Descripción</Label>
                     <Input
@@ -385,6 +386,7 @@ export default function ReceiptUpload() {
                       placeholder="Ingrese una descripción"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor={`date-${receipt.id}`}>Fecha del documento</Label>
                     <Input
@@ -405,6 +407,7 @@ export default function ReceiptUpload() {
                       }))}
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor={`total-${receipt.id}`}>Monto Total sin IVA</Label>
                     <Input
@@ -426,9 +429,6 @@ export default function ReceiptUpload() {
                         return r;
                       }))}
                     />
-                  </div>
-
-                  
                   </div>
 
                   <div className="flex justify-end">

@@ -468,10 +468,32 @@ export default function Dashboard() {
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Documentos Asignados</CardTitle>
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedCategory(null)}
+              className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
+            >
+              Todos
+            </Button>
+            {documentCategories?.map((category) => (
+              <Button
+                key={category.id}
+                variant="outline"
+                onClick={() => setSelectedCategory(category.id)}
+                className={selectedCategory === category.id ? "bg-primary text-primary-foreground" : ""}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {documents?.filter(doc => doc.targetUsers.includes(user?.id))?.length === 0 ? (
+            {documents?.filter(doc => 
+              doc.targetUsers.includes(user?.id) && 
+              (!selectedCategory || doc.categoryId === selectedCategory)
+            )?.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
                 No hay documentos asignados
               </p>

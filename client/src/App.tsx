@@ -11,6 +11,24 @@ import CategoryManager from "./pages/CategoryManager";
 import TablesViewer from "@/pages/TablesViewer";
 import CompanyManager from "@/pages/CompanyManager";
 import DocumentManager from "./pages/DocumentManager";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import SneatLayout from "./components/layouts/SneatLayout";
+import CssBaseline from '@mui/material/CssBaseline';
+
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#696CFF',
+    },
+    background: {
+      default: '#F5F5F9',
+    },
+  },
+  typography: {
+    fontFamily: "'Public Sans', sans-serif",
+  },
+});
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -44,8 +62,11 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
-      <Toaster />
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppContent />
+        <Toaster />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

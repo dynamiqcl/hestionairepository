@@ -409,7 +409,7 @@ export default function ReceiptUpload() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`total-${receipt.id}`}>Monto Total sin IVA</Label>
+                    <Label htmlFor={`total-${receipt.id}`}>Monto Total</Label>
                     <Input
                       id={`total-${receipt.id}`}
                       type="number"

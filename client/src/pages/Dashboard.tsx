@@ -103,6 +103,19 @@ export default function Dashboard() {
   const userFilteredReceipts = filteredReceipts?.filter(receipt => receipt.userId === user?.id) || [];
   const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0);
   const receiptCount = userFilteredReceipts.length;
+  
+  // Calcular los gastos del año anterior a la misma fecha
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const lastYearReceipts = receipts?.filter(receipt => {
+    const receiptDate = new Date(receipt.date);
+    // Misma fecha pero un año menos
+    return receipt.userId === user?.id && 
+           receiptDate.getFullYear() === currentYear - 1 && 
+           receiptDate.getMonth() <= today.getMonth() &&
+           (receiptDate.getMonth() < today.getMonth() || receiptDate.getDate() <= today.getDate());
+  }) || [];
+  const lastYearTotalAmount = lastYearReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0);
 
   // Preparar datos para el gráfico de torta
   const pieChartData = userFilteredReceipts.reduce((acc: any[], receipt) => {
@@ -244,6 +257,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCLP(totalAmount)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gastos Año Anterior</CardTitle>
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCLP(lastYearTotalAmount)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {totalAmount > lastYearTotalAmount 
+                ? `${(((totalAmount / lastYearTotalAmount) - 1) * 100).toFixed(1)}% más que el año pasado` 
+                : `${(((lastYearTotalAmount / totalAmount) - 1) * 100).toFixed(1)}% menos que el año pasado`}
+            </p>
           </CardContent>
         </Card>
         <Card>

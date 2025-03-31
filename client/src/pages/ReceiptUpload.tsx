@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ValidationResult {
   isValid: boolean;
@@ -79,6 +79,7 @@ export default function ReceiptUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: companies } = useCompanies();
   const { data: categories } = useCategories();
+  const queryClient = useQueryClient();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -210,8 +211,11 @@ export default function ReceiptUpload() {
       if (!response.ok) {
         throw new Error(await response.text());
       }
-
-      await addReceipt(await response.json());
+      
+      // Invalidar la caché para que se actualice la lista de boletas
+      // Aquí NO llamamos a addReceipt porque la boleta ya ha sido guardada por el servidor
+      // y eso causaría una duplicación
+      queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });
 
       toast({
         title: "¡Éxito!",

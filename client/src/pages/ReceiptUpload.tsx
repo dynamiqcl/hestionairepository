@@ -319,9 +319,13 @@ export default function ReceiptUpload() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="w-full h-48 border rounded-lg overflow-hidden">
                 {receipt.file.type.includes('pdf') ? (
-                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                    <FileText className="h-12 w-12 text-muted-foreground mr-2" />
-                    <p className="text-sm text-muted-foreground">{receipt.file.name}</p>
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
+                    <FileText className="h-24 w-24 text-primary mb-2" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Documento PDF</p>
+                      <p className="text-xs text-muted-foreground">{receipt.file.name}</p>
+                      <p className="text-xs text-muted-foreground mt-2">No hay vista previa disponible</p>
+                    </div>
                   </div>
                 ) : (
                   <img

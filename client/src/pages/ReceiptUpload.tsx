@@ -104,7 +104,7 @@ export default function ReceiptUpload() {
   const processImage = async (receiptId: string, file: File) => {
     try {
       let text = '';
-      let imageData = null;
+      let imageData = undefined;
       
       // Verificar si el archivo es un PDF o una imagen
       if (file.type.includes('pdf')) {
@@ -138,7 +138,8 @@ export default function ReceiptUpload() {
       console.log('Texto extraído:', text);
 
       // Usar el sistema de categorización
-      const receiptData = await categorizeReceipt(text, imageData);
+      // Asegurarnos de que imageData sea undefined si no está presente
+      const receiptData = await categorizeReceipt(text, imageData || undefined);
       console.log('Datos procesados:', receiptData);
 
       const extractedFields = {

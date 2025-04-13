@@ -104,85 +104,202 @@ export default function ReceiptUpload() {
 
   const processImage = async (receiptId: string, file: File) => {
     try {
-      let text = '';
-      let imageData = undefined;
-      
-      // Verificar si el archivo es un PDF o una imagen
-      if (file.type.includes('pdf')) {
-        // Para los PDF, establecemos valores predeterminados razonables
-        // ya que Tesseract no puede procesar PDFs directamente
-        console.log('Procesando PDF:', file.name);
-        
-        // Extraer fecha del nombre del archivo o usar la fecha actual
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0]; // formato YYYY-MM-DD
-        
-        // Generamos un texto con información básica para permitir la categorización
-        text = `Boleta: ${file.name}\nFecha: ${dateStr}\nEmpresa: Por definir\nMonto: 0\nCategoria: Otros`;
-        
-        // No usamos imageData para PDFs
-        imageData = undefined;
-      } else {
-        // Para imágenes, seguimos con el proceso actual
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await new Promise((resolve) => (img.onload = resolve));
-
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error("No se pudo crear el contexto 2D");
-
-        ctx.drawImage(img, 0, 0);
-        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Procesar el texto con Tesseract
-        const result = await Tesseract.recognize(file, 'spa', {
-          logger: m => console.log(m)
-        });
-        text = result.data.text;
-      }
-
-      console.log('Texto extraído:', text);
-
-      // Usar el sistema de categorización
-      // Asegurarnos de que imageData sea undefined si no está presente
-      const receiptData = await categorizeReceipt(text, imageData || undefined);
-      console.log('Datos procesados:', receiptData);
-
-      const extractedFields = {
-        date: receiptData.date,
-        total: receiptData.total,
-        vendor: receiptData.vendor,
-        category: receiptData.category,
-        taxAmount: receiptData.taxAmount,
-      };
-
+      // Establecer estado inicial procesando
       setReceipts(prev => prev.map(r => {
         if (r.id === receiptId) {
-          return {
-            ...r,
-            isProcessing: false,
-            validation: {
-              isValid: receiptData.isValid,
-              validationIssues: receiptData.validationIssues,
-              confidence: receiptData.confidence
-            },
-            extractedData: extractedFields,
-            editedData: {...extractedFields}
-          };
+          return { ...r, isProcessing: true };
         }
         return r;
       }));
-
-      if (!receiptData.isValid) {
-        toast({
-          title: "Advertencia",
-          description: `Los datos extraídos de la boleta ${file.name} podrían no ser precisos. Por favor, verifícalos.`,
-          variant: "destructive",
+      
+      // Verificar si el archivo es un PDF o una imagen
+      if (file.type.includes('pdf')) {
+        // Para PDFs, usamos nuestra API especial basada en OpenAI
+        console.log('Procesando PDF con OpenAI:', file.name);
+        
+        // Crear FormData para enviar el PDF
+        const pdfFormData = new FormData();
+        pdfFormData.append('pdf', file);
+        
+        // Enviar a la API del servidor
+        const response = await fetch('/api/receipts/pdf', {
+          method: 'POST',
+          body: pdfFormData,
         });
+        
+        if (!response.ok) {
+          throw new Error(`Error al procesar PDF: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('Respuesta del servidor (PDF):', result);
+        
+        if (result.extractedData) {
+          const extractedFields = {
+            date: new Date(result.extractedData.date),
+            total: result.extractedData.total,
+            vendor: result.extractedData.vendor,
+            category: result.extractedData.category,
+            taxAmount: result.extractedData.taxAmount || Math.round(result.extractedData.total * 0.19),
+            description: result.extractedData.description || '',
+          };
+          
+          setReceipts(prev => prev.map(r => {
+            if (r.id === receiptId) {
+              return {
+                ...r,
+                isProcessing: false,
+                validation: {
+                  isValid: true,
+                  validationIssues: [],
+                  confidence: { overall: 0.9, category: 0.9, amount: 0.9, date: 0.9, vendor: 0.9 }
+                },
+                extractedData: extractedFields,
+                editedData: {...extractedFields},
+                serverId: result.id,  // Guardamos el ID del servidor para futuras operaciones
+              };
+            }
+            return r;
+          }));
+          
+          toast({
+            title: "PDF procesado correctamente",
+            description: `Se procesó el PDF ${file.name} con éxito usando IA.`,
+          });
+          
+          return;
+        } else {
+          throw new Error('No se pudo extraer información del PDF');
+        }
+      } else {
+        // Para imágenes, intentamos primero con OpenAI, si falla usamos Tesseract
+        let text = '';
+        let imageData = undefined;
+        let openAIFailed = false;
+        
+        try {
+          // Crear FormData para enviar la imagen
+          const imageFormData = new FormData();
+          imageFormData.append('image', file);
+          
+          // Enviar a la API del servidor
+          const response = await fetch('/api/receipts', {
+            method: 'POST',
+            body: imageFormData,
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Error en la API: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          console.log('Respuesta del servidor (Imagen):', result);
+          
+          if (result.aiExtracted) {
+            // Si OpenAI extrajo datos correctamente, usamos esos
+            const extractedFields = {
+              date: new Date(result.date),
+              total: result.total,
+              vendor: result.vendor,
+              category: result.category || 'Otros',
+              taxAmount: result.taxAmount || Math.round(result.total * 0.19),
+              description: result.rawText || '',
+            };
+            
+            setReceipts(prev => prev.map(r => {
+              if (r.id === receiptId) {
+                return {
+                  ...r,
+                  isProcessing: false,
+                  validation: {
+                    isValid: true,
+                    validationIssues: [],
+                    confidence: { overall: 0.95, category: 0.95, amount: 0.95, date: 0.95, vendor: 0.95 }
+                  },
+                  extractedData: extractedFields,
+                  editedData: {...extractedFields},
+                  serverId: result.id,
+                };
+              }
+              return r;
+            }));
+            
+            toast({
+              title: "Imagen procesada con IA",
+              description: `Se procesó la imagen ${file.name} con éxito usando IA.`,
+            });
+            
+            return;
+          } else {
+            // Si OpenAI falló pero la API respondió, continuamos con Tesseract
+            openAIFailed = true;
+          }
+        } catch (error) {
+          console.error('Error al procesar con OpenAI, usando Tesseract:', error);
+          openAIFailed = true;
+        }
+        
+        if (openAIFailed) {
+          // Fallback a Tesseract para imágenes
+          const img = new Image();
+          img.src = URL.createObjectURL(file);
+          await new Promise((resolve) => (img.onload = resolve));
+  
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error("No se pudo crear el contexto 2D");
+  
+          ctx.drawImage(img, 0, 0);
+          imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+          // Procesar el texto con Tesseract como método de respaldo
+          const result = await Tesseract.recognize(file, 'spa', {
+            logger: m => console.log(m)
+          });
+          text = result.data.text;
+          
+          console.log('Texto extraído por Tesseract:', text);
+  
+          // Usar el sistema de categorización local
+          const receiptData = await categorizeReceipt(text, imageData || undefined);
+          console.log('Datos procesados localmente:', receiptData);
+      
+          const extractedFields = {
+            date: receiptData.date,
+            total: receiptData.total,
+            vendor: receiptData.vendor,
+            category: receiptData.category,
+            taxAmount: receiptData.taxAmount,
+            description: text.substring(0, 200) || '',
+          };
+          
+          toast({
+            title: "Imagen procesada localmente",
+            description: `La IA en la nube no pudo procesar la imagen, se usó procesamiento local.`,
+          });
+      
+          setReceipts(prev => prev.map(r => {
+            if (r.id === receiptId) {
+              return {
+                ...r,
+                isProcessing: false,
+                validation: {
+                  isValid: receiptData.isValid,
+                  validationIssues: receiptData.validationIssues,
+                  confidence: receiptData.confidence
+                },
+                extractedData: extractedFields,
+                editedData: {...extractedFields}
+              };
+            }
+            return r;
+          }));
+        }
       }
+
+
     } catch (error) {
       console.error('Error al procesar la boleta:', error);
       toast({
@@ -193,7 +310,13 @@ export default function ReceiptUpload() {
 
       setReceipts(prev => prev.map(r => {
         if (r.id === receiptId) {
-          return { ...r, isProcessing: false };
+          return { 
+            ...r, 
+            isProcessing: false,
+            validation: null,
+            extractedData: null,
+            editedData: null
+          };
         }
         return r;
       }));
@@ -281,6 +404,9 @@ export default function ReceiptUpload() {
                       <p className="text-sm text-center text-muted-foreground px-4">
                         Arrastra y suelta imágenes o PDFs, o haz clic para seleccionar múltiples boletas
                       </p>
+                      <p className="text-xs text-center text-blue-500">
+                        ¡Nuevo! Procesamiento mejorado con Inteligencia Artificial
+                      </p>
                     </div>
                     <Input
                       ref={fileInputRef}
@@ -291,6 +417,9 @@ export default function ReceiptUpload() {
                       className="hidden"
                       onChange={handleFileUpload}
                     />
+                    <small className="mt-2 text-xs text-center text-muted-foreground">
+                      Formatos permitidos: JPEG, PNG, PDF. Tamaño máximo: 5MB
+                    </small>
                   </label>
                 </div>
               </div>

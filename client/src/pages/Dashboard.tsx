@@ -49,6 +49,7 @@ interface Document {
   fileUrl: string;
   createdAt: string;
   targetUsers: number[];
+  category?: string;
 }
 
 // Función para formatear montos en CLP

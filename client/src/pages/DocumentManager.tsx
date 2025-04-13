@@ -46,6 +46,7 @@ interface Document {
   targetUsers: number[];
   isActive: boolean;
   createdAt: string;
+  category?: string;
 }
 
 interface User {
@@ -198,11 +199,11 @@ export default function DocumentManager() {
                     <SelectValue placeholder="Selecciona una categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="Documentos Generales">Documentos Generales</SelectItem>
+                    <SelectItem value="Impuestos Mensuales (F-29)">Impuestos Mensuales (F-29)</SelectItem>
+                    <SelectItem value="Impuestos Anuales (F-22)">Impuestos Anuales (F-22)</SelectItem>
+                    <SelectItem value="Reportes Financieros">Reportes Financieros</SelectItem>
+                    <SelectItem value="Liquidaciones de Sueldo">Liquidaciones de Sueldo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -289,6 +290,7 @@ export default function DocumentManager() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Descripción</TableHead>
+                  <TableHead>Categoría</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead className="w-[100px]">Acciones</TableHead>
                 </TableRow>
@@ -298,6 +300,7 @@ export default function DocumentManager() {
                   <TableRow key={doc.id}>
                     <TableCell>{doc.name}</TableCell>
                     <TableCell>{doc.description}</TableCell>
+                    <TableCell>{doc.category || "Documentos Generales"}</TableCell>
                     <TableCell>
                       {new Date(doc.createdAt).toLocaleDateString()}
                     </TableCell>

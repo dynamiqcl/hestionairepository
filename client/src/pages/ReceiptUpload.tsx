@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Upload, CheckCircle2, X } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, X, FileText } from "lucide-react";
 import Tesseract from 'tesseract.js';
 import { categorizeReceipt } from "@/lib/categorize";
 import {
@@ -103,26 +103,38 @@ export default function ReceiptUpload() {
 
   const processImage = async (receiptId: string, file: File) => {
     try {
-      // Crear ImageData para el preprocesamiento
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await new Promise((resolve) => (img.onload = resolve));
+      let text = '';
+      let imageData = null;
+      
+      // Verificar si el archivo es un PDF o una imagen
+      if (file.type.includes('pdf')) {
+        // Para los PDF, vamos a usar Tesseract directamente sin preprocesamiento de imagen
+        const result = await Tesseract.recognize(file, 'spa', {
+          logger: m => console.log(m)
+        });
+        text = result.data.text;
+      } else {
+        // Para imágenes, seguimos con el proceso actual
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await new Promise((resolve) => (img.onload = resolve));
 
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error("No se pudo crear el contexto 2D");
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("No se pudo crear el contexto 2D");
 
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      // Procesar el texto con Tesseract
-      const result = await Tesseract.recognize(file, 'spa', {
-        logger: m => console.log(m)
-      });
+        // Procesar el texto con Tesseract
+        const result = await Tesseract.recognize(file, 'spa', {
+          logger: m => console.log(m)
+        });
+        text = result.data.text;
+      }
 
-      const text = result.data.text;
       console.log('Texto extraído:', text);
 
       // Usar el sistema de categorización
@@ -247,7 +259,7 @@ export default function ReceiptUpload() {
         <CardContent>
           <div className="space-y-4">
             <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="receipt">Imágenes de Boletas</Label>
+              <Label htmlFor="receipt">Imágenes y PDFs de Boletas</Label>
               <div className="mt-2">
                 <div className="flex flex-col items-center justify-center w-full">
                   <label
@@ -257,14 +269,14 @@ export default function ReceiptUpload() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                       <p className="text-sm text-center text-muted-foreground px-4">
-                        Arrastra y suelta imágenes o haz clic para seleccionar múltiples boletas
+                        Arrastra y suelta imágenes o PDFs, o haz clic para seleccionar múltiples boletas
                       </p>
                     </div>
                     <Input
                       ref={fileInputRef}
                       id="receipt"
                       type="file"
-                      accept="image/*"
+                      accept="image/*,application/pdf"
                       multiple
                       className="hidden"
                       onChange={handleFileUpload}
@@ -295,12 +307,19 @@ export default function ReceiptUpload() {
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <img
-                  src={receipt.preview}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg"
-                />
+              <div className="w-full h-48 border rounded-lg overflow-hidden">
+                {receipt.file.type.includes('pdf') ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <FileText className="h-12 w-12 text-muted-foreground mr-2" />
+                    <p className="text-sm text-muted-foreground">{receipt.file.name}</p>
+                  </div>
+                ) : (
+                  <img
+                    src={receipt.preview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
 
               {receipt.isProcessing ? (

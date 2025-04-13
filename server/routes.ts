@@ -10,6 +10,7 @@ import fs from "fs";
 import express from "express";
 import { randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
+import { analyzeReceiptImage } from "./openai";
 
 // Configuración de multer para almacenar las imágenes de las boletas
 const receiptStorage = multer.diskStorage({
@@ -85,6 +86,35 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
   },
+});
+
+// Configuración para almacenar PDFs de boletas
+const receiptPdfStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), "uploads", "receipts");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    cb(null, "receipt-pdf-" + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadReceiptPdf = multer({
+  storage: receiptPdfStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Solo se permiten archivos PDF"));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
 });
 
 export function registerRoutes(app: Express): Server {
@@ -364,16 +394,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Nueva ruta para subir boletas con imágenes
+  // Nueva ruta para subir boletas con imágenes (incluyendo análisis con OpenAI)
   app.post("/api/receipts", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
       const date = new Date();
+      let imageUrl = null;
+      let extractedData = null;
 
+      // Procesamiento de la imagen con OpenAI si hay un archivo subido
+      if (req.file) {
+        imageUrl = `/uploads/receipts/${req.file.filename}`;
+        const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+        
+        console.log("Analizando imagen de boleta con OpenAI...");
+        const analysisResult = await analyzeReceiptImage(filePath);
+        console.log("Resultado del análisis OpenAI:", analysisResult);
+        
+        if (analysisResult.success) {
+          extractedData = analysisResult.extractedData;
+        }
+      } else if (req.body.imageUrl) {
+        // Si se proporciona una URL de imagen directamente
+        imageUrl = req.body.imageUrl;
+      }
+
+      // Utilizar datos de OpenAI si están disponibles, de lo contrario usar los datos del formulario
+      const receiptDate = extractedData?.date || new Date(req.body.date);
+      const receiptTotal = extractedData?.total || parseFloat(req.body.total.toString());
+      const receiptVendor = extractedData?.vendor || req.body.vendor;
+      const receiptCategory = extractedData?.category || req.body.category;
+      const receiptDescription = extractedData?.description || req.body.description || "";
+      
       // Obtener el categoryId basado en el nombre de la categoría
       const categoryId = await db
         .select({ id: categories.id })
         .from(categories)
-        .where(eq(categories.name, req.body.category))
+        .where(eq(categories.name, receiptCategory))
         .then(rows => rows[0]?.id);
 
       // Obtener el último receiptId
@@ -387,25 +443,16 @@ export function registerRoutes(app: Express): Server {
         ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
         : "1";
 
-      // Construir la URL de la imagen
-      let imageUrl = null;
-      if (req.file) {
-        imageUrl = `/uploads/receipts/${req.file.filename}`;
-      } else if (req.body.imageUrl) {
-        // Si se proporciona una URL de imagen directamente
-        imageUrl = req.body.imageUrl;
-      }
-
       const receiptData = {
         userId: req.user!.id,
-        date: new Date(req.body.date),
-        total: parseFloat(req.body.total.toString()),
-        vendor: req.body.vendor,
-        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : null,
+        date: receiptDate,
+        total: receiptTotal,
+        vendor: receiptVendor,
+        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : Math.round(receiptTotal * 0.19),
         receiptId: nextId,
         categoryId,
         companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
-        rawText: req.body.rawText || "",
+        rawText: receiptDescription || req.body.rawText || "",
         imageUrl
       };
 
@@ -414,7 +461,10 @@ export function registerRoutes(app: Express): Server {
         .values(receiptData)
         .returning();
 
-      res.json(newReceipt);
+      res.json({
+        ...newReceipt,
+        aiExtracted: extractedData ? true : false
+      });
     } catch (error) {
       console.error("Error al agregar la boleta:", error);
       res.status(500).json({ error: "Error al agregar la boleta" });
@@ -528,6 +578,94 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error al eliminar la boleta:", error);
       res.status(500).json({ success: false, error: "Error al eliminar la boleta" });
+    }
+  });
+  
+  // Ruta para subir y procesar PDFs de boletas con OpenAI
+  app.post("/api/receipts/pdf", ensureAuth, uploadReceiptPdf.single('pdf'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se ha subido ningún archivo PDF" });
+      }
+      
+      // Ruta al archivo PDF subido
+      const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+      const imageUrl = `/uploads/receipts/${req.file.filename}`;
+      
+      console.log("Analizando PDF de boleta con OpenAI...");
+      const analysisResult = await analyzeReceiptImage(pdfPath);
+      console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
+      
+      // Si el análisis con OpenAI falló, devolver error
+      if (!analysisResult.success) {
+        return res.status(422).json({
+          error: "No se pudo extraer información del PDF",
+          details: analysisResult.message
+        });
+      }
+      
+      const extractedData = analysisResult.extractedData;
+      
+      // Obtener el categoryId basado en el nombre de la categoría
+      const categoryId = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.name, extractedData.category))
+        .then(rows => rows[0]?.id);
+        
+      // Si no existe la categoría, crear una nueva
+      let finalCategoryId = categoryId;
+      if (!finalCategoryId) {
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: extractedData.category,
+            description: `Categoría creada automáticamente para boleta de ${extractedData.vendor}`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        finalCategoryId = newCategory.id;
+      }
+      
+      // Obtener el último receiptId
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+        
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+        
+      // Crear la boleta con la información extraída
+      const receiptData = {
+        userId: req.user!.id,
+        date: extractedData.date,
+        total: extractedData.total,
+        vendor: extractedData.vendor,
+        taxAmount: Math.round(extractedData.total * 0.19), // Estimación de IVA
+        receiptId: nextId,
+        categoryId: finalCategoryId,
+        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
+        rawText: extractedData.description || "Boleta PDF procesada con IA",
+        imageUrl
+      };
+      
+      const [newReceipt] = await db
+        .insert(receipts)
+        .values(receiptData)
+        .returning();
+        
+      res.json({
+        ...newReceipt,
+        aiExtracted: true,
+        extractedData
+      });
+      
+    } catch (error) {
+      console.error("Error al procesar PDF de boleta:", error);
+      res.status(500).json({ error: "Error al procesar PDF de boleta" });
     }
   });
 

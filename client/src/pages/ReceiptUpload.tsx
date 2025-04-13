@@ -88,7 +88,8 @@ export default function ReceiptUpload() {
     const newReceipts: ReceiptData[] = Array.from(files).map(file => ({
       id: Math.random().toString(36).substring(7),
       file,
-      preview: URL.createObjectURL(file),
+      // No creamos URL para previsualizaciones de PDFs, solo para imágenes
+      preview: file.type.includes('pdf') ? '' : URL.createObjectURL(file),
       isProcessing: true,
       validation: null,
       extractedData: null,

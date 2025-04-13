@@ -150,7 +150,6 @@ export default function Dashboard() {
           ID: receipt.receiptId,
           Fecha: new Date(receipt.date).toLocaleDateString('es-ES'),
           Empresa: receipt.companyName || 'Sin empresa',
-          Proveedor: receipt.vendor,
           Categoría: receipt.category || 'Sin categoría',
           Total: receipt.total,
         })));
@@ -389,7 +388,6 @@ export default function Dashboard() {
                       <TableHead>ID</TableHead>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Empresa</TableHead>
-                      <TableHead>Proveedor</TableHead>
                       <TableHead>Categoría</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead className="text-center">Acciones</TableHead>
@@ -413,7 +411,6 @@ export default function Dashboard() {
                         <TableCell>{receipt.receiptId}</TableCell>
                         <TableCell>{new Date(receipt.date).toLocaleDateString('es-ES')}</TableCell>
                         <TableCell>{receipt.companyName || 'Sin empresa'}</TableCell>
-                        <TableCell>{receipt.vendor}</TableCell>
                         <TableCell>{receipt.category || 'Sin categoría'}</TableCell>
                         <TableCell className="text-right">{formatCLP(Number(receipt.total))}</TableCell>
                         <TableCell>

@@ -402,7 +402,7 @@ export default function ReceiptUpload() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                       <p className="text-sm text-center text-muted-foreground px-4">
-                        Arrastra y suelta imágenes o PDFs, o haz clic para seleccionar múltiples boletas
+                        Haz clic para seleccionar múltiples boletas
                       </p>
                       <p className="text-xs text-center text-blue-500">
                         ¡Nuevo! Procesamiento mejorado con Inteligencia Artificial

@@ -190,12 +190,10 @@ export default function DocumentManager() {
               <div className="space-y-2">
                 <Label htmlFor="category">Categoría</Label>
                 <Select
-                  id="category"
-                  name="category"
                   value={selectedCategory}
                   onValueChange={setSelectedCategory}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecciona una categoría" />
                   </SelectTrigger>
                   <SelectContent>
@@ -206,6 +204,7 @@ export default function DocumentManager() {
                     <SelectItem value="Liquidaciones de Sueldo">Liquidaciones de Sueldo</SelectItem>
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="category" value={selectedCategory} />
               </div>
 
               <div className="space-y-2">
@@ -278,6 +277,56 @@ export default function DocumentManager() {
               ? "Documentos Disponibles"
               : "Mis Documentos"}
           </CardTitle>
+          <div className="flex flex-wrap gap-2 pt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("")}
+              className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
+            >
+              Todos
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("Documentos Generales")}
+              className={selectedCategory === "Documentos Generales" ? "bg-primary text-primary-foreground" : ""}
+            >
+              Documentos Generales
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("Impuestos Mensuales (F-29)")}
+              className={selectedCategory === "Impuestos Mensuales (F-29)" ? "bg-primary text-primary-foreground" : ""}
+            >
+              Impuestos Mensuales (F-29)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("Impuestos Anuales (F-22)")}
+              className={selectedCategory === "Impuestos Anuales (F-22)" ? "bg-primary text-primary-foreground" : ""}
+            >
+              Impuestos Anuales (F-22)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("Reportes Financieros")}
+              className={selectedCategory === "Reportes Financieros" ? "bg-primary text-primary-foreground" : ""}
+            >
+              Reportes Financieros
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("Liquidaciones de Sueldo")}
+              className={selectedCategory === "Liquidaciones de Sueldo" ? "bg-primary text-primary-foreground" : ""}
+            >
+              Liquidaciones de Sueldo
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {documents?.length === 0 ? (
@@ -296,7 +345,9 @@ export default function DocumentManager() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {documents?.map((doc) => (
+                {documents
+                  ?.filter(doc => !selectedCategory || doc.category === selectedCategory || (selectedCategory === "Documentos Generales" && !doc.category))
+                  .map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell>{doc.name}</TableCell>
                     <TableCell>{doc.description}</TableCell>

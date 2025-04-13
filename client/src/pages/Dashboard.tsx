@@ -521,7 +521,7 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             {documents?.filter(doc => 
               doc.targetUsers.includes(user?.id) && 
-              (!selectedDocCategory || doc.category === selectedDocCategory)
+              (!selectedDocCategory || doc.category === selectedDocCategory || (selectedDocCategory === "Documentos Generales" && !doc.category))
             )?.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
                 No hay documentos asignados
@@ -539,7 +539,7 @@ export default function Dashboard() {
                 <tbody>
                   {documents?.filter(doc => 
                     doc.targetUsers.includes(user?.id) && 
-                    (!selectedDocCategory || doc.category === selectedDocCategory)
+                    (!selectedDocCategory || doc.category === selectedDocCategory || (selectedDocCategory === "Documentos Generales" && !doc.category))
                   )?.map((doc) => (
                     <tr key={doc.id} className="border-b">
                       <td className="p-4">{doc.name}</td>

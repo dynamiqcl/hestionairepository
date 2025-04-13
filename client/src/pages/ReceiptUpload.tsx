@@ -109,11 +109,16 @@ export default function ReceiptUpload() {
       
       // Verificar si el archivo es un PDF o una imagen
       if (file.type.includes('pdf')) {
-        // Para los PDF, vamos a usar Tesseract directamente sin preprocesamiento de imagen
-        const result = await Tesseract.recognize(file, 'spa', {
-          logger: m => console.log(m)
-        });
-        text = result.data.text;
+        // Para los PDF, simulamos un texto de extracción básico
+        // Tesseract no puede procesar PDFs directamente, normalmente se necesitaría
+        // un convertidor de PDF a imagen en el servidor
+        console.log('Procesando PDF:', file.name);
+        
+        // Establecemos datos simulados pero vacíos para que el usuario pueda completarlos manualmente
+        text = `Boleta: ${file.name}\nDocumento PDF\nPor favor, complete los datos manualmente`;
+        
+        // No usamos imageData para PDFs
+        imageData = undefined;
       } else {
         // Para imágenes, seguimos con el proceso actual
         const img = new Image();

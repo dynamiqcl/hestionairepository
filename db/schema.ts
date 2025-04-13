@@ -63,6 +63,7 @@ export const documents = pgTable("documents", {
   fileUrl: text("file_url").notNull(),
   uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
   targetUsers: jsonb("target_users").notNull().$type<number[]>(),
+  category: text("category").default("Documentos Generales"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

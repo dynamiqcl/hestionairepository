@@ -502,15 +502,16 @@ export default function Dashboard() {
             >
               Todos
             </Button>
-            {categories?.map((category) => (
+            {/* Categorías específicas para documentos */}
+            {["Documentos Generales", "Impuestos Mensuales (F-29)", "Impuestos Anuales (F-22)", "Reportes Financieros", "Liquidaciones de Sueldo"].map((categoryName) => (
               <Button
-                key={category.id}
+                key={categoryName}
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedDocCategory(category.name)}
-                className={selectedDocCategory === category.name ? "bg-primary text-primary-foreground" : ""}
+                onClick={() => setSelectedDocCategory(categoryName)}
+                className={selectedDocCategory === categoryName ? "bg-primary text-primary-foreground" : ""}
               >
-                {category.name}
+                {categoryName}
               </Button>
             ))}
           </div>

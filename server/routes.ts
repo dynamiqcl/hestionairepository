@@ -680,6 +680,7 @@ export function registerRoutes(app: Express): Server {
           fileUrl: documents.fileUrl,
           uploadedBy: documents.uploadedBy,
           targetUsers: documents.targetUsers,
+          category: documents.category,
           isActive: documents.isActive,
           createdAt: documents.createdAt,
         })
@@ -704,7 +705,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });
       }
 
-      const { name, description, targetUsers } = req.body;
+      const { name, description, targetUsers, category } = req.body;
       const fileUrl = `/uploads/${req.file.filename}`;
 
       const [newDocument] = await db
@@ -715,6 +716,7 @@ export function registerRoutes(app: Express): Server {
           fileUrl,
           uploadedBy: req.user!.id,
           targetUsers: JSON.parse(targetUsers),
+          category: category || "Documentos Generales",
           isActive: true,
         })
         .returning();

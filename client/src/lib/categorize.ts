@@ -314,9 +314,16 @@ function extractVendor(text: string): { vendor: string; confidence: number } {
 
 export async function categorizeReceipt(text: string, imageData?: ImageData) {
   let enhancedConfidence = 1.0;
+  let isPdfMode = false;
+
+  // Detectar si estamos procesando un PDF (por el texto generado)
+  if (text.includes('Documento PDF') || text.includes('Por favor, complete los datos manualmente')) {
+    isPdfMode = true;
+    console.log('Detectado modo PDF');
+  }
 
   // Si hay datos de imagen, realizar preprocesamiento
-  if (imageData) {
+  if (imageData && !isPdfMode) {
     try {
       const processedImage = await preprocessImage(imageData);
       enhancedConfidence = 1.2; // Aumentar la confianza si el preprocesamiento fue exitoso
@@ -327,11 +334,26 @@ export async function categorizeReceipt(text: string, imageData?: ImageData) {
     }
   }
 
-  const validation = validateReceipt(text);
-  const categorization = categorizeByKeywords(text);
-  const amountInfo = extractAmount(text);
-  const dateInfo = extractDate(text);
-  const vendorInfo = extractVendor(text);
+  // Para PDFs, usamos información de la fecha actual y valores predeterminados
+  let validation, categorization, amountInfo, dateInfo, vendorInfo;
+  
+  if (isPdfMode) {
+    // Extraemos la fecha del texto (formato YYYY-MM-DD)
+    const dateMatch = text.match(/Fecha: (\d{4}-\d{2}-\d{2})/);
+    const dateStr = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
+    
+    validation = { isValid: true, confidence: 0.8, issues: [] };
+    categorization = { category: 'Otros', confidence: 0.8 };
+    amountInfo = { amount: 0, confidence: 0.8 };
+    dateInfo = { date: new Date(dateStr), confidence: 0.8 };
+    vendorInfo = { vendor: 'Documento PDF', confidence: 0.8 };
+  } else {
+    validation = validateReceipt(text);
+    categorization = categorizeByKeywords(text);
+    amountInfo = extractAmount(text);
+    dateInfo = extractDate(text);
+    vendorInfo = extractVendor(text);
+  }
 
   // Ajustar confianzas basadas en el preprocesamiento de imagen
   const adjustedConfidence = {

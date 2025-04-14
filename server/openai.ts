@@ -5,8 +5,13 @@ import { promisify } from 'util';
 
 // Crear cliente de OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
+
+// Verify API key availability
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('WARNING: OPENAI_API_KEY not found in environment variables');
+}
 
 // Convertir un archivo a base64 para enviarlo a OpenAI
 const readFile = promisify(fs.readFile);

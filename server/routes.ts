@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { receipts, companies, users, UserRole, categories, documents } from "@db/schema";
+import { receipts, companies, users, UserRole, categories, documents, userMessages } from "@db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import multer from "multer";
@@ -759,6 +759,124 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Rutas para los mensajes personalizados a usuarios
+  // Obtener mensaje para un usuario específico
+  app.get("/api/user-messages/:userId", ensureAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // El administrador puede ver cualquier mensaje, pero los usuarios regulares solo los suyos
+      if (req.user?.role !== UserRole.ADMINISTRADOR && req.user?.id !== parseInt(userId)) {
+        return res.status(403).json({ error: "No tienes permiso para ver este mensaje" });
+      }
+      
+      const messages = await db
+        .select()
+        .from(userMessages)
+        .where(eq(userMessages.userId, parseInt(userId)))
+        .orderBy(desc(userMessages.createdAt));
+      
+      // Retornar el mensaje activo más reciente
+      const activeMessage = messages.find(msg => msg.isActive);
+      
+      res.json(activeMessage || null);
+    } catch (error) {
+      console.error("Error al obtener mensaje de usuario:", error);
+      res.status(500).json({ error: "Error al obtener mensaje de usuario" });
+    }
+  });
+  
+  // Crear o actualizar mensaje para un usuario (solo administrador)
+  app.post("/api/user-messages", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { userId, message } = req.body;
+      
+      if (!userId || !message) {
+        return res.status(400).json({ error: "El ID de usuario y el mensaje son requeridos" });
+      }
+      
+      // Validar que el usuario existe
+      const [userExists] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+        
+      if (!userExists) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+      
+      // Desactivar mensajes anteriores
+      await db
+        .update(userMessages)
+        .set({ isActive: false })
+        .where(eq(userMessages.userId, userId));
+      
+      // Crear nuevo mensaje
+      const [newMessage] = await db
+        .insert(userMessages)
+        .values({
+          userId,
+          message,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      res.json(newMessage);
+    } catch (error) {
+      console.error("Error al crear mensaje de usuario:", error);
+      res.status(500).json({ error: "Error al crear mensaje de usuario" });
+    }
+  });
+  
+  // Actualizar estado de un mensaje (activar/desactivar)
+  app.put("/api/user-messages/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      if (isActive === undefined) {
+        return res.status(400).json({ error: "El estado del mensaje es requerido" });
+      }
+      
+      const [updatedMessage] = await db
+        .update(userMessages)
+        .set({ 
+          isActive, 
+          updatedAt: new Date() 
+        })
+        .where(eq(userMessages.id, parseInt(id)))
+        .returning();
+        
+      if (!updatedMessage) {
+        return res.status(404).json({ error: "Mensaje no encontrado" });
+      }
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error al actualizar mensaje:", error);
+      res.status(500).json({ error: "Error al actualizar mensaje" });
+    }
+  });
+  
+  // Eliminar mensaje
+  app.delete("/api/user-messages/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db
+        .delete(userMessages)
+        .where(eq(userMessages.id, parseInt(id)));
+        
+      res.json({ message: "Mensaje eliminado correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar mensaje:", error);
+      res.status(500).json({ error: "Error al eliminar mensaje" });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }

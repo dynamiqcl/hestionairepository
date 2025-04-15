@@ -56,6 +56,15 @@ export const insertCompanySchema = createInsertSchema(companies).extend({
 
 export const selectCompanySchema = createSelectSchema(companies);
 
+export const userMessages = pgTable("user_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -151,3 +160,9 @@ export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 // Add company types
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
+
+// Add user message schemas and types
+export const insertUserMessageSchema = createInsertSchema(userMessages);
+export const selectUserMessageSchema = createSelectSchema(userMessages);
+export type UserMessage = typeof userMessages.$inferSelect;
+export type InsertUserMessage = z.infer<typeof insertUserMessageSchema>;

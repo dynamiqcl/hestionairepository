@@ -9,6 +9,7 @@ import { useReceipts } from "@/hooks/use-receipts";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye, FileText } from "lucide-react";
+import { UserMessage } from "@/components/ui/user-message";
 import {
   Dialog,
   DialogContent,
@@ -282,6 +283,7 @@ export default function Dashboard() {
             <div className="text-2xl font-bold">{receiptCount}</div>
           </CardContent>
         </Card>
+        <UserMessage className="lg:col-span-1 md:col-span-2" />
       </div>
 
       <Card className="mb-8">

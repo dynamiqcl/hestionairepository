@@ -1,9 +1,7 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare } from "lucide-react";
-import { useUserMessages } from "@/hooks/use-user-messages";
 import { useAuth } from "@/hooks/use-auth";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MessageSquare } from "lucide-react";
 
 interface UserMessageProps {
   userId?: number;
@@ -11,44 +9,78 @@ interface UserMessageProps {
 }
 
 export function UserMessage({ userId, className }: UserMessageProps) {
+  const [message, setMessage] = useState<{
+    id: number;
+    message: string;
+    isActive: boolean;
+    createdAt: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { getUserMessage } = useUserMessages();
-  const messageId = userId || user?.id;
-  
-  const { data: userMessage, isLoading } = getUserMessage(messageId as number);
 
-  if (isLoading) {
+  useEffect(() => {
+    async function fetchMessage() {
+      try {
+        setLoading(true);
+        const id = userId || user?.id;
+        if (!id) return;
+
+        const response = await fetch(`/api/user-messages/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.isActive) {
+            setMessage(data);
+          } else {
+            setMessage(null);
+          }
+        } else {
+          setMessage(null);
+        }
+      } catch (error) {
+        console.error("Error fetching user message:", error);
+        setMessage(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMessage();
+  }, [userId, user?.id]);
+
+  if (loading) {
     return (
       <Card className={className}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <Skeleton className="h-4 w-40" />
+          <CardTitle className="text-sm font-medium flex items-center">
+            <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+            Mensaje de Administración
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-16 w-full" />
+          <div className="h-4 w-3/4 bg-muted rounded animate-pulse mb-2"></div>
+          <div className="h-4 w-1/2 bg-muted rounded animate-pulse"></div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!userMessage) {
+  if (!message) {
     return null;
   }
 
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Mensaje del Administrador
+        <CardTitle className="text-sm font-medium flex items-center">
+          <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+          Mensaje de Administración
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-sm whitespace-pre-wrap">
-          {userMessage.message}
-        </div>
+        <p className="text-sm">{message.message}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {new Date(message.createdAt).toLocaleDateString('es-ES')}
+        </p>
       </CardContent>
     </Card>
   );

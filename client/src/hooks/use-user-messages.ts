@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "./use-toast";
 
 export interface UserMessage {
@@ -8,52 +8,53 @@ export interface UserMessage {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  userName?: string; // Campo adicional para mostrar en la UI
+}
+
+interface CreateUserMessageParams {
+  userId: number;
+  message: string;
+}
+
+interface UpdateUserMessageStatusParams {
+  id: number;
+  userId: number;
+  isActive: boolean;
+}
+
+interface DeleteUserMessageParams {
+  id: number;
+  userId: number;
 }
 
 export function useUserMessages() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Obtener mensaje para un usuario específico
-  const getUserMessage = (userId: number) => {
-    return useQuery<UserMessage | null>({
-      queryKey: ['/api/user-messages', userId],
-      queryFn: async () => {
-        const response = await fetch(`/api/user-messages/${userId}`);
-        if (!response.ok) {
-          throw new Error('Error al obtener el mensaje del usuario');
-        }
-        const data = await response.json();
-        return data;
-      },
-      enabled: !!userId
-    });
-  };
-
-  // Crear o actualizar mensaje
   const createMessageMutation = useMutation({
-    mutationFn: async (data: { userId: number; message: string }) => {
-      const response = await fetch('/api/user-messages', {
-        method: 'POST',
+    mutationFn: async ({ userId, message }: CreateUserMessageParams) => {
+      const response = await fetch(`/api/user-messages/${userId}`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ message }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear mensaje');
+        const errorData = await response.text();
+        throw new Error(errorData || "Error al crear el mensaje");
       }
 
-      return response.json();
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
       toast({
         title: "Mensaje creado",
-        description: "El mensaje ha sido creado correctamente",
+        description: "El mensaje se ha creado correctamente",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user-messages', data.userId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-messages/${variables.userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-messages/all"] });
     },
     onError: (error: Error) => {
       toast({
@@ -64,30 +65,30 @@ export function useUserMessages() {
     },
   });
 
-  // Actualizar estado de un mensaje
   const updateMessageStatusMutation = useMutation({
-    mutationFn: async ({ id, isActive, userId }: { id: number; isActive: boolean; userId: number }) => {
-      const response = await fetch(`/api/user-messages/${id}`, {
-        method: 'PUT',
+    mutationFn: async ({ id, userId, isActive }: UpdateUserMessageStatusParams) => {
+      const response = await fetch(`/api/user-messages/${userId}/${id}/status`, {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ isActive }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar mensaje');
+        const errorData = await response.text();
+        throw new Error(errorData || "Error al actualizar el estado del mensaje");
       }
 
-      return response.json();
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
       toast({
-        title: "Mensaje actualizado",
-        description: `El mensaje ha sido ${data.isActive ? 'activado' : 'desactivado'} correctamente`,
+        title: "Estado actualizado",
+        description: `El mensaje ahora está ${variables.isActive ? "activo" : "inactivo"}`,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user-messages', data.userId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-messages/${variables.userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-messages/all"] });
     },
     onError: (error: Error) => {
       toast({
@@ -98,26 +99,26 @@ export function useUserMessages() {
     },
   });
 
-  // Eliminar mensaje
   const deleteMessageMutation = useMutation({
-    mutationFn: async ({ id, userId }: { id: number; userId: number }) => {
-      const response = await fetch(`/api/user-messages/${id}`, {
-        method: 'DELETE',
+    mutationFn: async ({ id, userId }: DeleteUserMessageParams) => {
+      const response = await fetch(`/api/user-messages/${userId}/${id}`, {
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al eliminar mensaje');
+        const errorData = await response.text();
+        throw new Error(errorData || "Error al eliminar el mensaje");
       }
 
-      return { id, userId };
+      return true;
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
       toast({
         title: "Mensaje eliminado",
         description: "El mensaje ha sido eliminado correctamente",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user-messages', data.userId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-messages/${variables.userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-messages/all"] });
     },
     onError: (error: Error) => {
       toast({
@@ -129,7 +130,6 @@ export function useUserMessages() {
   });
 
   return {
-    getUserMessage,
     createMessageMutation,
     updateMessageStatusMutation,
     deleteMessageMutation,

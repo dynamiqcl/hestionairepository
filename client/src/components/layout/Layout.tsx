@@ -59,6 +59,12 @@ export function Layout({ children }: LayoutProps) {
       path: "/tables",
       showFor: ["ADMINISTRADOR"],
     },
+    {
+      title: "Mensajes",
+      icon: <MessageSquare className="w-5 h-5" />,
+      path: "/user-messages",
+      showFor: ["ADMINISTRADOR"],
+    },
   ];
 
   return (

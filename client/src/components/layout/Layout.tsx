@@ -14,7 +14,8 @@ import {
   X,
   LogOut,
   Building2,
-  Bell
+  Bell,
+  MessageSquare
 } from "lucide-react";
 import 'boxicons/css/boxicons.min.css';
 

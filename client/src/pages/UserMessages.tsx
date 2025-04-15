@@ -21,11 +21,11 @@ import { MessageSquare, Check, X, Clock, Edit, Trash2, User, Plus } from "lucide
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 
 export default function UserMessagesPage() {
   const { isAdmin, user } = useAuth();
-  const [, navigate] = useNavigate();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");

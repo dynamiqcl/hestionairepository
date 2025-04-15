@@ -11,6 +11,7 @@ import CategoryManager from "./pages/CategoryManager";
 import TablesViewer from "@/pages/TablesViewer";
 import CompanyManager from "@/pages/CompanyManager";
 import DocumentManager from "./pages/DocumentManager";
+import UserMessages from "./pages/UserMessages";
 import { Layout } from "@/components/layout/Layout";
 
 function AppContent() {
@@ -37,6 +38,7 @@ function AppContent() {
         <Route path="/tables" component={TablesViewer} />
         <Route path="/companies" component={CompanyManager} />
         <Route path="/documents" component={DocumentManager} />
+        <Route path="/user-messages" component={UserMessages} />
       </Switch>
     </Layout>
   );

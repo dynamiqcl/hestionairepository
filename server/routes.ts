@@ -787,9 +787,10 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Crear o actualizar mensaje para un usuario (solo administrador)
-  app.post("/api/user-messages", ensureAuth, ensureAdmin, async (req, res) => {
+  app.post("/api/user-messages/:userId", ensureAuth, ensureAdmin, async (req, res) => {
     try {
-      const { userId, message } = req.body;
+      const userId = parseInt(req.params.userId);
+      const { message } = req.body;
       
       if (!userId || !message) {
         return res.status(400).json({ error: "El ID de usuario y el mensaje son requeridos" });
@@ -832,9 +833,9 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Actualizar estado de un mensaje (activar/desactivar)
-  app.put("/api/user-messages/:id", ensureAuth, ensureAdmin, async (req, res) => {
+  app.patch("/api/user-messages/:userId/:id/status", ensureAuth, ensureAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = parseInt(req.params.id);
       const { isActive } = req.body;
       
       if (isActive === undefined) {
@@ -862,13 +863,17 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Eliminar mensaje
-  app.delete("/api/user-messages/:id", ensureAuth, ensureAdmin, async (req, res) => {
+  app.delete("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
       
       await db
         .delete(userMessages)
-        .where(eq(userMessages.id, parseInt(id)));
+        .where(and(
+          eq(userMessages.id, id),
+          eq(userMessages.userId, userId)
+        ));
         
       res.json({ message: "Mensaje eliminado correctamente" });
     } catch (error) {

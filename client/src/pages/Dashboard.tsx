@@ -179,7 +179,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
+    <div className="container mx-auto p-4 md:p-6 pb-20 md:pb-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div className="flex items-center w-full justify-between md:w-auto">
           <div>
@@ -234,8 +234,8 @@ export default function Dashboard() {
           </Button>
         </div>
         
-        {/* Barra de accesos rápidos visible en todos los dispositivos */}
-        <div className="w-full bg-gray-100 py-2 px-4 mt-4 flex justify-center items-center gap-2 overflow-x-auto">
+        {/* Barra de accesos rápidos visible en todos los dispositivos (escondida en móviles) */}
+        <div className="w-full bg-gray-100 py-2 px-4 mt-4 hidden md:flex justify-center items-center gap-2 overflow-x-auto">
           <a href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank" rel="noopener noreferrer" className="min-w-fit">
             <Button variant="ghost" size="sm" className="h-9">
               <FileText className="w-4 h-4 mr-2" />
@@ -260,6 +260,47 @@ export default function Dashboard() {
             <LogOut className="w-4 h-4 mr-2" />
             Salir
           </Button>
+        </div>
+        
+        {/* Barra fija de accesos rápidos para móviles (estilo dock en la parte inferior) */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden shadow-lg">
+          <div className="flex justify-around items-center py-3">
+            <a href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-xs mt-1 font-medium">Carpeta SII</span>
+            </a>
+            <Link href="/upload" className="flex flex-col items-center p-2">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
+                <Receipt className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-xs mt-1 font-medium">Subir Boleta</span>
+            </Link>
+            {!isAdmin ? (
+              <Button variant="ghost" className="flex flex-col items-center p-2 h-auto bg-transparent hover:bg-transparent" onClick={() => logout()}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
+                  <LogOut className="w-5 h-5 text-primary" />
+                </div>
+                <span className="text-xs mt-1 font-medium">Salir</span>
+              </Button>
+            ) : (
+              <>
+                <Link href="/companies" className="flex flex-col items-center p-2">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
+                    <Plus className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-xs mt-1 font-medium">Empresas</span>
+                </Link>
+                <Button variant="ghost" className="flex flex-col items-center p-2 h-auto bg-transparent hover:bg-transparent" onClick={() => logout()}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
+                    <LogOut className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-xs mt-1 font-medium">Salir</span>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

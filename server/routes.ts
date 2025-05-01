@@ -862,38 +862,52 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Actualizar contenido de un mensaje
+  // Actualizar contenido de un mensaje - endpoint simplificado
   app.put("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       console.log("PUT /api/user-messages/:userId/:id - Request params:", req.params);
       console.log("PUT /api/user-messages/:userId/:id - Request body:", req.body);
       console.log("PUT /api/user-messages/:userId/:id - Request body type:", typeof req.body);
+      console.log("PUT /api/user-messages/:userId/:id - Request headers:", req.headers);
       
-      if (!req.body || Object.keys(req.body).length === 0) {
-        console.log("PUT /api/user-messages - No request body received");
+      // Obtener los parámetros de la URL
+      const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      
+      // Verificar si el cuerpo de la solicitud es válido
+      if (!req.body) {
         return res.status(400).json({ error: "No se recibió el contenido de la solicitud" });
       }
       
-      const id = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
-      const { message } = req.body;
-      
-      console.log("PUT /api/user-messages - Parsed values:", { id, userId, message });
-      
-      if (message === undefined) {
-        console.log("PUT /api/user-messages - Message field is missing");
-        return res.status(400).json({ error: "El campo 'message' es requerido" });
+      // Extraer el mensaje del cuerpo, con varias alternativas para flexibilidad
+      let messageContent = null;
+      if (typeof req.body === 'string') {
+        messageContent = req.body;
+      } else if (req.body.message) {
+        messageContent = req.body.message;
+      } else if (req.body.contenido) {
+        messageContent = req.body.contenido;
+      } else if (req.body.text) {
+        messageContent = req.body.text;
+      } else {
+        // Si no podemos encontrar el mensaje, tomamos la primera propiedad del objeto
+        const keys = Object.keys(req.body);
+        if (keys.length > 0) {
+          messageContent = req.body[keys[0]];
+        }
       }
       
-      if (!message || !message.trim()) {
-        console.log("PUT /api/user-messages - Invalid message");
-        return res.status(400).json({ error: "El mensaje es requerido" });
+      console.log("PUT /api/user-messages - Extracted message:", messageContent);
+      
+      // Validar que tengamos un mensaje
+      if (!messageContent || (typeof messageContent === 'string' && !messageContent.trim())) {
+        return res.status(400).json({ error: "El mensaje no puede estar vacío" });
       }
       
       const [updatedMessage] = await db
         .update(userMessages)
         .set({ 
-          message: message.trim(), 
+          message: typeof messageContent === 'string' ? messageContent.trim() : String(messageContent), 
           updatedAt: new Date() 
         })
         .where(and(

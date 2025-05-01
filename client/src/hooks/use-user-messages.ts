@@ -75,6 +75,7 @@ export function useUserMessages() {
     mutationFn: async ({ id, userId, message }: UpdateUserMessageParams) => {
       console.log("Sending update request:", { id, userId, message });
       
+      // Ajustado para manejar diferentes formatos - mensaje directo
       const response = await fetch(`/api/user-messages/${userId}/${id}`, {
         method: "PUT",
         headers: {

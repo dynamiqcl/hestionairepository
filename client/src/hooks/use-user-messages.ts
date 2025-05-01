@@ -16,6 +16,12 @@ interface CreateUserMessageParams {
   message: string;
 }
 
+interface UpdateUserMessageParams {
+  id: number;
+  userId: number;
+  message: string;
+}
+
 interface UpdateUserMessageStatusParams {
   id: number;
   userId: number;
@@ -52,6 +58,40 @@ export function useUserMessages() {
       toast({
         title: "Mensaje creado",
         description: "El mensaje se ha creado correctamente",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-messages/${variables.userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-messages/all"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMessageMutation = useMutation({
+    mutationFn: async ({ id, userId, message }: UpdateUserMessageParams) => {
+      const response = await fetch(`/api/user-messages/${userId}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Error al actualizar el mensaje");
+      }
+
+      return await response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Mensaje actualizado",
+        description: "El contenido del mensaje ha sido actualizado correctamente",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/user-messages/${variables.userId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/user-messages/all"] });
@@ -131,6 +171,7 @@ export function useUserMessages() {
 
   return {
     createMessageMutation,
+    updateMessageMutation,
     updateMessageStatusMutation,
     deleteMessageMutation,
   };

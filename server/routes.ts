@@ -862,6 +862,40 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Actualizar contenido de un mensaje
+  app.put("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      const { message } = req.body;
+      
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: "El mensaje es requerido" });
+      }
+      
+      const [updatedMessage] = await db
+        .update(userMessages)
+        .set({ 
+          message: message.trim(), 
+          updatedAt: new Date() 
+        })
+        .where(and(
+          eq(userMessages.id, id),
+          eq(userMessages.userId, userId)
+        ))
+        .returning();
+        
+      if (!updatedMessage) {
+        return res.status(404).json({ error: "Mensaje no encontrado" });
+      }
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error al actualizar contenido del mensaje:", error);
+      res.status(500).json({ error: "Error al actualizar contenido del mensaje" });
+    }
+  });
+  
   // Eliminar mensaje
   app.delete("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {

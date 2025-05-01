@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { MessageSquare, Trash, Plus, RefreshCw, X } from "lucide-react";
+import { MessageSquare, Trash, Plus, RefreshCw, X, Pencil } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -50,12 +50,19 @@ export default function UserMessagesPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<UserMessage | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [messages, setMessages] = useState<UserMessage[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { createMessageMutation, updateMessageStatusMutation, deleteMessageMutation } = useUserMessages();
+  const { 
+    createMessageMutation,
+    updateMessageMutation, 
+    updateMessageStatusMutation, 
+    deleteMessageMutation 
+  } = useUserMessages();
 
   // Consulta para obtener todos los usuarios
   useEffect(() => {
@@ -120,6 +127,33 @@ export default function UserMessagesPage() {
       fetchAllMessages();
     } catch (error) {
       console.error("Error al crear mensaje:", error);
+    }
+  };
+
+  const handleOpenEditDialog = (message: UserMessage) => {
+    setEditingMessage(message);
+    setMessage(message.message);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateMessage = async () => {
+    if (!editingMessage || !message.trim()) return;
+    
+    try {
+      await updateMessageMutation.mutateAsync({
+        id: editingMessage.id,
+        userId: editingMessage.userId,
+        message: message.trim(),
+      });
+      
+      setShowEditDialog(false);
+      setMessage("");
+      setEditingMessage(null);
+      
+      // Recargar mensajes
+      fetchAllMessages();
+    } catch (error) {
+      console.error("Error al actualizar mensaje:", error);
     }
   };
 
@@ -202,7 +236,7 @@ export default function UserMessagesPage() {
                   <TableHead>Mensaje</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead className="w-32">Estado</TableHead>
-                  <TableHead className="w-20 text-right">Acciones</TableHead>
+                  <TableHead className="w-24 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -228,13 +262,24 @@ export default function UserMessagesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteMessage(message)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEditDialog(message)}
+                          title="Editar mensaje"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMessage(message)}
+                          title="Eliminar mensaje"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -316,6 +361,56 @@ export default function UserMessagesPage() {
                 <MessageSquare className="h-4 w-4 mr-1" />
               )}
               Enviar Mensaje
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para editar mensaje */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Mensaje</DialogTitle>
+            <DialogDescription>
+              Modifica el contenido del mensaje para {editingMessage?.userName || `Usuario ${editingMessage?.userId}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-message">Mensaje</Label>
+              <Textarea
+                id="edit-message"
+                placeholder="Edita el mensaje personalizado..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowEditDialog(false);
+                setEditingMessage(null);
+                setMessage("");
+              }}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUpdateMessage}
+              disabled={!message.trim() || updateMessageMutation.isPending}
+            >
+              {updateMessageMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Pencil className="h-4 w-4 mr-1" />
+              )}
+              Actualizar Mensaje
             </Button>
           </DialogFooter>
         </DialogContent>

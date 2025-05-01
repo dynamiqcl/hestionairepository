@@ -196,54 +196,67 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="hidden md:flex md:items-center md:space-x-4">
+        {/* Los botones principales se han movido a la barra de accesos rápidos visible en todos los dispositivos */}
+
+        {/* Mobile menu */}
+        <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:hidden flex-col w-full space-y-2`}>
           <a href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost">
+            <Button variant="ghost" className="w-full justify-start">
               <FileText className="w-4 h-4 mr-2" />
               Carpeta Tributaria SII
             </Button>
           </a>
           <Link href="/upload">
-            <Button variant="ghost">
+            <Button variant="ghost" className="w-full justify-start">
               <Receipt className="w-4 h-4 mr-2" />
               Subir Boleta
             </Button>
           </Link>
-          <Link href="/companies">
-            <Button variant="ghost">
-              <Plus className="w-4 h-4 mr-2" />
-              Ir a Empresas
-            </Button>
-          </Link>
           {isAdmin && (
-            <Link href="/tables">
-              <Button variant="ghost">
-                <Settings className="w-4 h-4 mr-2" />
-                Mantenedores
-              </Button>
-            </Link>
+            <>
+              <Link href="/companies">
+                <Button variant="ghost" className="w-full justify-start">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ir a Empresas
+                </Button>
+              </Link>
+              <Link href="/tables">
+                <Button variant="ghost" className="w-full justify-start">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Mantenedores
+                </Button>
+              </Link>
+            </>
           )}
-          <Button variant="ghost" onClick={() => logout()}>
+          <Button variant="ghost" className="w-full justify-start" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Salir
           </Button>
         </div>
-
-        {/* Mobile menu */}
-        <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:hidden flex-col w-full space-y-2`}>
-          <Link href="/upload">
-            <Button variant="ghost" className="w-full justify-start">
+        
+        {/* Barra de accesos rápidos visible en todos los dispositivos */}
+        <div className="w-full bg-gray-100 py-2 px-4 mt-4 flex justify-center items-center gap-2 overflow-x-auto">
+          <a href="https://zeus.sii.cl/dii_cgi/carpeta_tributaria/cte_para_creditos_00.cgi" target="_blank" rel="noopener noreferrer" className="min-w-fit">
+            <Button variant="ghost" size="sm" className="h-9">
+              <FileText className="w-4 h-4 mr-2" />
+              Carpeta Tributaria SII
+            </Button>
+          </a>
+          <Link href="/upload" className="min-w-fit">
+            <Button variant="ghost" size="sm" className="h-9">
               <Receipt className="w-4 h-4 mr-2" />
               Subir Boleta
             </Button>
           </Link>
-          <Link href="/tables">
-            <Button variant="ghost" className="w-full justify-start">
-              <Settings className="w-4 h-4 mr-2" />
-              Mantenedores
-            </Button>
-          </Link>
-          <Button variant="ghost" className="w-full justify-start" onClick={() => logout()}>
+          {isAdmin && (
+            <Link href="/companies" className="min-w-fit">
+              <Button variant="ghost" size="sm" className="h-9">
+                <Plus className="w-4 h-4 mr-2" />
+                Ir a Empresas
+              </Button>
+            </Link>
+          )}
+          <Button variant="ghost" size="sm" className="h-9 min-w-fit" onClick={() => logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Salir
           </Button>

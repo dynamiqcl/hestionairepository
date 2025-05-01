@@ -73,6 +73,8 @@ export function useUserMessages() {
 
   const updateMessageMutation = useMutation({
     mutationFn: async ({ id, userId, message }: UpdateUserMessageParams) => {
+      console.log("Sending update request:", { id, userId, message });
+      
       const response = await fetch(`/api/user-messages/${userId}/${id}`, {
         method: "PUT",
         headers: {
@@ -83,6 +85,7 @@ export function useUserMessages() {
 
       if (!response.ok) {
         const errorData = await response.text();
+        console.error("Error response:", errorData);
         throw new Error(errorData || "Error al actualizar el mensaje");
       }
 

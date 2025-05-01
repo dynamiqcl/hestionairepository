@@ -865,11 +865,28 @@ export function registerRoutes(app: Express): Server {
   // Actualizar contenido de un mensaje
   app.put("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
+      console.log("PUT /api/user-messages/:userId/:id - Request params:", req.params);
+      console.log("PUT /api/user-messages/:userId/:id - Request body:", req.body);
+      console.log("PUT /api/user-messages/:userId/:id - Request body type:", typeof req.body);
+      
+      if (!req.body || Object.keys(req.body).length === 0) {
+        console.log("PUT /api/user-messages - No request body received");
+        return res.status(400).json({ error: "No se recibió el contenido de la solicitud" });
+      }
+      
       const id = parseInt(req.params.id);
       const userId = parseInt(req.params.userId);
       const { message } = req.body;
       
+      console.log("PUT /api/user-messages - Parsed values:", { id, userId, message });
+      
+      if (message === undefined) {
+        console.log("PUT /api/user-messages - Message field is missing");
+        return res.status(400).json({ error: "El campo 'message' es requerido" });
+      }
+      
       if (!message || !message.trim()) {
+        console.log("PUT /api/user-messages - Invalid message");
         return res.status(400).json({ error: "El mensaje es requerido" });
       }
       

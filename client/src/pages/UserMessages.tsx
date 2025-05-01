@@ -140,6 +140,12 @@ export default function UserMessagesPage() {
     if (!editingMessage || !message.trim()) return;
     
     try {
+      console.log("Enviando actualización:", {
+        id: editingMessage.id,
+        userId: editingMessage.userId,
+        message: message.trim()
+      });
+      
       await updateMessageMutation.mutateAsync({
         id: editingMessage.id,
         userId: editingMessage.userId,

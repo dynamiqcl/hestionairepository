@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { receipts, companies, users, UserRole, categories, documents, userMessages } from "@db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
-import { setupAuth } from "./auth";
+import { setupAuth, crypto } from "./auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -243,11 +243,21 @@ export function registerRoutes(app: Express): Server {
   app.put("/api/users/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const { newPassword, ...userData } = req.body;
+      
+      // Preparar los datos a actualizar
       const updateData = {
-        ...req.body,
+        ...userData,
         updatedAt: new Date(),
       };
-
+      
+      // Si se proporciona una nueva contraseña, la hasheamos
+      if (newPassword && newPassword.trim() !== '') {
+        const hashedPassword = await crypto.hash(newPassword);
+        updateData.password = hashedPassword;
+      }
+      
+      // Actualizar usuario en la base de datos
       const [updatedUser] = await db
         .update(users)
         .set(updateData)

@@ -11,6 +11,7 @@ import { Pencil, Trash2, Download } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { UserRole } from "@db/schema";
 
 import { Navbar } from "@/components/ui/navbar";
 

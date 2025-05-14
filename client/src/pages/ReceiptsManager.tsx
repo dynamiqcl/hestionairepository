@@ -88,7 +88,6 @@ export default function ReceiptsManager() {
     maxAmount: ''
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [showAllReceipts, setShowAllReceipts] = useState(false);
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ['/api/categories'],
@@ -98,17 +97,11 @@ export default function ReceiptsManager() {
     queryKey: ['/api/companies'],
   });
 
-  // Filtrar recibos por usuario actual y ordenar por fecha de creación descendente (más recientes primero)
+  // Filtrar recibos por usuario actual
   const userReceipts = receipts?.filter(receipt => receipt.userId === user?.id) || [];
-  const sortedReceipts = [...userReceipts].sort((a, b) => 
-    new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime()
-  );
-  
-  // Limitar a los últimos 5 recibos si no se ha solicitado mostrar todos
-  const limitedReceipts = showAllReceipts ? sortedReceipts : sortedReceipts.slice(0, 5);
 
   // Aplicar filtros
-  const filteredReceipts = limitedReceipts.filter(receipt => {
+  const filteredReceipts = userReceipts.filter(receipt => {
     const receiptDate = new Date(receipt.date);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;
@@ -147,19 +140,7 @@ export default function ReceiptsManager() {
       maxAmount: ''
     });
     setSearchTerm('');
-    setShowAllReceipts(false);
   };
-  
-  // Cuando se aplican filtros, mostrar todos los resultados
-  React.useEffect(() => {
-    const hasActiveFilters = 
-      searchTerm !== '' || 
-      Object.values(filters).some(value => value !== '');
-    
-    if (hasActiveFilters) {
-      setShowAllReceipts(true);
-    }
-  }, [searchTerm, filters]);
 
   const handleDeleteReceipt = async (id: number) => {
     try {
@@ -235,14 +216,7 @@ export default function ReceiptsManager() {
   return (
     <div className="container mx-auto p-4 md:p-6 pb-20 md:pb-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-bold">Gestión de Boletas</h1>
-          {!showAllReceipts && (
-            <p className="text-muted-foreground text-sm mt-1">
-              Mostrando las 5 boletas más recientes
-            </p>
-          )}
-        </div>
+        <h1 className="text-2xl md:text-4xl font-bold">Gestión de Boletas</h1>
         
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-64">
@@ -370,29 +344,9 @@ export default function ReceiptsManager() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <CardTitle>
-                {filteredReceipts.length} {filteredReceipts.length === 1 ? 'boleta' : 'boletas'} encontradas
-              </CardTitle>
-              {!showAllReceipts && sortedReceipts.length > 5 && (
-                <Button 
-                  variant="link" 
-                  onClick={() => setShowAllReceipts(true)}
-                  className="text-sm font-normal"
-                >
-                  Ver todas ({sortedReceipts.length})
-                </Button>
-              )}
-              {showAllReceipts && (
-                <Button 
-                  variant="link" 
-                  onClick={() => setShowAllReceipts(false)}
-                  className="text-sm font-normal"
-                >
-                  Ver solo recientes
-                </Button>
-              )}
-            </div>
+            <CardTitle>
+              {filteredReceipts.length} {filteredReceipts.length === 1 ? 'boleta' : 'boletas'} encontradas
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent>

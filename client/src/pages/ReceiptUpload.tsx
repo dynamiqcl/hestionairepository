@@ -324,32 +324,48 @@ export default function ReceiptUpload() {
   };
 
   const handleSave = async (receipt: ReceiptData) => {
-    if (!receipt.editedData || !receipt.file) return;
+    if (!receipt.editedData || !receipt.file) {
+      toast({
+        title: "Error",
+        description: "La boleta no ha sido procesada correctamente. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Validar campos obligatorios
-    const requiredFields = ['companyId', 'category', 'description', 'date', 'total'] as const;
-    const missingFields = requiredFields.filter(field => {
-      // Verificar si el campo está vacío, indefinido, nulo o es cero (para total)
-      const value = receipt.editedData[field as keyof typeof receipt.editedData];
-      if (field === 'total') {
-        return value === undefined || value === null || (typeof value === 'number' && value <= 0);
-      }
-      return !value;
-    });
 
-    if (missingFields.length > 0) {
-      const fieldNames: Record<string, string> = {
-        companyId: 'Empresa',
-        category: 'Categoría',
-        description: 'Descripción',
-        date: 'Fecha',
-        total: 'Monto total'
-      };
-      
-      const missingFieldNames = missingFields.map(field => fieldNames[field]);
+    const validationErrors: string[] = [];
+    
+    // Verificar empresa
+    if (!receipt.editedData.companyId) {
+      validationErrors.push('Empresa');
+    }
+    
+    // Verificar categoría
+    if (!receipt.editedData.category) {
+      validationErrors.push('Categoría');
+    }
+    
+    // Verificar descripción
+    if (!receipt.editedData.description) {
+      validationErrors.push('Descripción');
+    }
+    
+    // Verificar fecha
+    if (!receipt.editedData.date) {
+      validationErrors.push('Fecha del documento');
+    }
+    
+    // Verificar monto total
+    if (!receipt.editedData.total || receipt.editedData.total <= 0) {
+      validationErrors.push('Monto total');
+    }
+
+    if (validationErrors.length > 0) {
       toast({
         title: "Campos obligatorios",
-        description: `Por favor completa los siguientes campos: ${missingFieldNames.join(', ')}`,
+        description: `Por favor completa los siguientes campos: ${validationErrors.join(', ')}`,
         variant: "destructive",
       });
       return;

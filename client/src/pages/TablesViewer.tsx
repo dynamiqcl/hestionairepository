@@ -21,7 +21,17 @@ export default function TablesViewer() {
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ username: "", password: "", nombreCompleto: "" });
+  const [newUser, setNewUser] = useState({ 
+    username: "", 
+    password: "", 
+    nombreCompleto: "", 
+    email: "",
+    nombreEmpresa: "",
+    rutEmpresa: "",
+    direccion: "", 
+    telefono: "", 
+    role: UserRole.CLIENTE 
+  });
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
 
   const { data: users } = useQuery({
@@ -132,7 +142,17 @@ export default function TablesViewer() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ title: "Usuario creado exitosamente" });
-      setNewUser({ username: "", password: "", nombreCompleto: "" });
+      setNewUser({ 
+        username: "", 
+        password: "", 
+        nombreCompleto: "", 
+        email: "",
+        nombreEmpresa: "",
+        rutEmpresa: "",
+        direccion: "", 
+        telefono: "", 
+        role: UserRole.CLIENTE 
+      });
       setIsCreatingUser(false);
     },
     onError: (error) => {
@@ -317,44 +337,80 @@ export default function TablesViewer() {
                       <DialogTitle>Crear Nuevo Usuario</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div>
-                        <Label>Correo Electrónico</Label>
-                        <Input
-                          value={newUser.username}
-                          onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                          type="email"
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Correo Electrónico</Label>
+                          <Input
+                            value={newUser.username}
+                            onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                            type="email"
+                          />
+                        </div>
+                        <div>
+                          <Label>Contraseña</Label>
+                          <Input
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                            type="password"
+                          />
+                        </div>
+                        <div>
+                          <Label>Nombre Completo</Label>
+                          <Input
+                            value={newUser.nombreCompleto}
+                            onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>Email</Label>
+                          <Input
+                            value={newUser.email}
+                            onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                            type="email"
+                          />
+                        </div>
+                        <div>
+                          <Label>Nombre Empresa</Label>
+                          <Input
+                            value={newUser.nombreEmpresa}
+                            onChange={(e) => setNewUser({...newUser, nombreEmpresa: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>RUT Empresa</Label>
+                          <Input
+                            value={newUser.rutEmpresa}
+                            onChange={(e) => setNewUser({...newUser, rutEmpresa: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>Dirección</Label>
+                          <Input
+                            value={newUser.direccion}
+                            onChange={(e) => setNewUser({...newUser, direccion: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>Teléfono</Label>
+                          <Input
+                            value={newUser.telefono}
+                            onChange={(e) => setNewUser({...newUser, telefono: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>Rol</Label>
+                          <select 
+                            className="w-full rounded-md border border-input bg-background px-3 py-2"
+                            value={newUser.role}
+                            onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                          >
+                            <option value={UserRole.CLIENTE}>Cliente</option>
+                            <option value={UserRole.EMPLEADO}>Empleado</option>
+                            <option value={UserRole.ADMINISTRADOR}>Administrador</option>
+                          </select>
+                        </div>
                       </div>
-                      <div>
-                        <Label>Contraseña</Label>
-                        <Input
-                          value={newUser.password}
-                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                          type="password"
-                        />
-                      </div>
-                      <div>
-                        <Label>Nombre Completo</Label>
-                        <Input
-                          value={newUser.nombreCompleto}
-                          onChange={(e) => setNewUser({...newUser, nombreCompleto: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Dirección</Label>
-                        <Input
-                          value={newUser.direccion}
-                          onChange={(e) => setNewUser({...newUser, direccion: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Teléfono</Label>
-                        <Input
-                          value={newUser.telefono}
-                          onChange={(e) => setNewUser({...newUser, telefono: e.target.value})}
-                        />
-                      </div>
-                      <Button onClick={() => createUserMutation.mutate(newUser)}>
+                      <Button onClick={() => createUserMutation.mutate(newUser)} className="w-full">
                         Crear Usuario
                       </Button>
                     </div>

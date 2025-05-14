@@ -188,6 +188,8 @@ export default function TablesViewer() {
                       <TableHead>ID</TableHead>
                       <TableHead>Username</TableHead>
                       <TableHead>Nombre Completo</TableHead>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Contacto</TableHead>
                       <TableHead>Rol</TableHead>
                       <TableHead>Acciones</TableHead>
                     </TableRow>
@@ -198,6 +200,18 @@ export default function TablesViewer() {
                         <TableCell>{user.id}</TableCell>
                         <TableCell>{user.username}</TableCell>
                         <TableCell>{user.nombreCompleto}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{user.nombreEmpresa}</div>
+                            <div className="text-sm text-muted-foreground">{user.rutEmpresa}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="text-sm">{user.email}</div>
+                            <div className="text-sm text-muted-foreground">{user.telefono}</div>
+                          </div>
+                        </TableCell>
                         <TableCell>{user.role}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -216,93 +230,117 @@ export default function TablesViewer() {
                                 <form onSubmit={(e) => {
                                   e.preventDefault();
                                   updateMutation.mutate({ type: 'users', item: editingItem });
-                                }} className="space-y-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="username">Username / Email</Label>
-                                    <Input
-                                      id="username"
-                                      value={editingItem?.username}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        username: e.target.value
-                                      })}
-                                    />
+                                }} className="space-y-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="username">Username / Email</Label>
+                                      <Input
+                                        id="username"
+                                        value={editingItem?.username}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          username: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="nombreCompleto">Nombre Completo</Label>
+                                      <Input
+                                        id="nombreCompleto"
+                                        value={editingItem?.nombreCompleto}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          nombreCompleto: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="password">Contraseña (dejar en blanco para mantener)</Label>
+                                      <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="Nueva contraseña"
+                                        value={editingItem?.newPassword || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          newPassword: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="email">Correo electrónico</Label>
+                                      <Input
+                                        id="email"
+                                        type="email"
+                                        value={editingItem?.email || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          email: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="nombreEmpresa">Nombre de Empresa</Label>
+                                      <Input
+                                        id="nombreEmpresa"
+                                        value={editingItem?.nombreEmpresa || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          nombreEmpresa: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="rutEmpresa">RUT Empresa</Label>
+                                      <Input
+                                        id="rutEmpresa"
+                                        value={editingItem?.rutEmpresa || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          rutEmpresa: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="direccion">Dirección</Label>
+                                      <Input
+                                        id="direccion"
+                                        value={editingItem?.direccion || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          direccion: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="telefono">Teléfono</Label>
+                                      <Input
+                                        id="telefono"
+                                        value={editingItem?.telefono || ""}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          telefono: e.target.value
+                                        })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="role">Rol</Label>
+                                      <select
+                                        id="role"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={editingItem?.role || UserRole.CLIENTE}
+                                        onChange={(e) => setEditingItem({
+                                          ...editingItem,
+                                          role: e.target.value
+                                        })}
+                                      >
+                                        <option value={UserRole.CLIENTE}>Cliente</option>
+                                        <option value={UserRole.ADMINISTRADOR}>Administrador</option>
+                                        <option value={UserRole.EMPLEADO}>Empleado</option>
+                                      </select>
+                                    </div>
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="nombreCompleto">Nombre Completo</Label>
-                                    <Input
-                                      id="nombreCompleto"
-                                      value={editingItem?.nombreCompleto}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        nombreCompleto: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="password">Contraseña (dejar en blanco para mantener)</Label>
-                                    <Input
-                                      id="password"
-                                      type="password"
-                                      placeholder="Nueva contraseña"
-                                      value={editingItem?.newPassword || ""}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        newPassword: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="email">Correo electrónico</Label>
-                                    <Input
-                                      id="email"
-                                      type="email"
-                                      value={editingItem?.email || ""}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        email: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="role">Rol</Label>
-                                    <select
-                                      id="role"
-                                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                      value={editingItem?.role || UserRole.CLIENTE}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        role: e.target.value
-                                      })}
-                                    >
-                                      <option value={UserRole.CLIENTE}>Cliente</option>
-                                      <option value={UserRole.ADMINISTRADOR}>Administrador</option>
-                                      <option value={UserRole.EMPLEADO}>Empleado</option>
-                                    </select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="direccion">Dirección</Label>
-                                    <Input
-                                      id="direccion"
-                                      value={editingItem?.direccion || ""}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        direccion: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="telefono">Teléfono</Label>
-                                    <Input
-                                      id="telefono"
-                                      value={editingItem?.telefono || ""}
-                                      onChange={(e) => setEditingItem({
-                                        ...editingItem,
-                                        telefono: e.target.value
-                                      })}
-                                    />
-                                  </div>
-                                  <Button type="submit">Guardar Cambios</Button>
+                                  <Button type="submit" className="w-full">Guardar Cambios</Button>
                                 </form>
                               </DialogContent>
                             </Dialog>

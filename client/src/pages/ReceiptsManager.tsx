@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useReceipts } from '@/hooks/use-receipts';
+import { useReceipts, ReceiptWithDetails } from '@/hooks/use-receipts';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -89,11 +89,11 @@ export default function ReceiptsManager() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ['/api/categories'],
   });
 
-  const { data: companies } = useQuery({
+  const { data: companies = [] } = useQuery<any[]>({
     queryKey: ['/api/companies'],
   });
 
@@ -290,7 +290,7 @@ export default function ReceiptsManager() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todas las categorías</SelectItem>
-                    {categories?.map((category: any) => (
+                    {(Array.isArray(categories) ? categories : []).map((category: any) => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}
                       </SelectItem>
@@ -310,7 +310,7 @@ export default function ReceiptsManager() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todas las empresas</SelectItem>
-                    {companies?.map((company: any) => (
+                    {(Array.isArray(companies) ? companies : []).map((company: any) => (
                       <SelectItem key={company.id} value={company.name}>
                         {company.name}
                       </SelectItem>

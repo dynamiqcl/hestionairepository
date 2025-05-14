@@ -2,11 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Receipt, InsertReceipt } from '@db/schema';
 import { useToast } from './use-toast';
 
+// Ampliamos el tipo Receipt para incluir las propiedades adicionales que devuelve la API
+export interface ReceiptWithDetails extends Receipt {
+  companyName?: string;
+  category?: string;
+  username?: string;
+  description?: string;
+}
+
 export function useReceipts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const query = useQuery<Receipt[]>({
+  const query = useQuery<ReceiptWithDetails[]>({
     queryKey: ['/api/receipts'],
     queryFn: async () => {
       const response = await fetch('/api/receipts', {

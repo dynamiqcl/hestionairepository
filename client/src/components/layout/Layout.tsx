@@ -37,9 +37,15 @@ export function Layout({ children }: LayoutProps) {
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {
-      title: "Boletas",
+      title: "Subir Boleta",
       icon: <Receipt className="w-5 h-5" />,
       path: "/upload",
+      showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
+    },
+    {
+      title: "Gestionar Boletas",
+      icon: <FileText className="w-5 h-5" />,
+      path: "/receipts",
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {

@@ -382,8 +382,17 @@ export default function Dashboard() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Boletas Recientes</CardTitle>
+        <CardHeader className="flex flex-row justify-between items-center">
+          <div>
+            <CardTitle>Boletas Recientes</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Mostrando las 5 boletas más recientes</p>
+          </div>
+          <Link href="/receipts">
+            <Button variant="outline" size="sm" className="gap-1">
+              <Eye className="w-4 h-4" />
+              Ver todas
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -451,7 +460,7 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).map((receipt) => (
+                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).slice(0, 5).map((receipt) => (
                       <TableRow key={receipt.id}>
                         <TableCell>
                           <Checkbox

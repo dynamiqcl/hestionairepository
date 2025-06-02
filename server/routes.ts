@@ -676,80 +676,32 @@ export function registerRoutes(app: Express): Server {
       const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
       const imageUrl = `/uploads/receipts/${req.file.filename}`;
       
-      console.log("Analizando PDF de boleta con OpenAI...");
+      console.log("Analizando PDF de boleta con OpenAI (solo procesamiento)...");
       const analysisResult = await analyzeReceiptImage(pdfPath);
       console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
       
       // Si el análisis con OpenAI falló, devolver error
       if (!analysisResult.success) {
         return res.status(422).json({
+          success: false,
           error: "No se pudo extraer información del PDF",
           details: analysisResult.message
         });
       }
       
-      const extractedData = analysisResult.extractedData;
-      
-      // Obtener el categoryId basado en el nombre de la categoría
-      const categoryId = await db
-        .select({ id: categories.id })
-        .from(categories)
-        .where(eq(categories.name, extractedData.category))
-        .then(rows => rows[0]?.id);
-        
-      // Si no existe la categoría, crear una nueva
-      let finalCategoryId = categoryId;
-      if (!finalCategoryId) {
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: extractedData.category,
-            description: `Categoría creada automáticamente para boleta de ${extractedData.vendor}`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        finalCategoryId = newCategory.id;
-      }
-      
-      // Obtener el último receiptId
-      const lastReceipt = await db
-        .select({ receiptId: receipts.receiptId })
-        .from(receipts)
-        .orderBy(desc(receipts.id))
-        .limit(1);
-        
-      const nextId = lastReceipt.length > 0
-        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
-        : "1";
-        
-      // Crear la boleta con la información extraída
-      const receiptData = {
-        userId: req.user!.id,
-        date: extractedData.date,
-        total: extractedData.total,
-        vendor: extractedData.vendor,
-        taxAmount: Math.round(extractedData.total * 0.19), // Estimación de IVA
-        receiptId: nextId,
-        categoryId: finalCategoryId,
-        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
-        rawText: extractedData.description || "Boleta PDF procesada con IA",
-        imageUrl
-      };
-      
-      const [newReceipt] = await db
-        .insert(receipts)
-        .values(receiptData)
-        .returning();
-        
+      // Devolver solo los datos extraídos sin guardar en la base de datos
       res.json({
-        ...newReceipt,
-        aiExtracted: true,
-        extractedData
+        success: true,
+        extractedData: analysisResult.extractedData,
+        imageUrl: imageUrl
       });
       
     } catch (error) {
       console.error("Error al procesar PDF de boleta:", error);
-      res.status(500).json({ error: "Error al procesar PDF de boleta" });
+      res.status(500).json({ 
+        success: false, 
+        error: "Error al procesar PDF de boleta" 
+      });
     }
   });
 

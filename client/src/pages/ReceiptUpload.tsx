@@ -135,7 +135,7 @@ export default function ReceiptUpload() {
         const result = await response.json();
         console.log('Respuesta del servidor (PDF):', result);
         
-        if (result.extractedData) {
+        if (result.success && result.extractedData) {
           const extractedFields = {
             date: new Date(result.extractedData.date),
             total: result.extractedData.total,
@@ -157,7 +157,7 @@ export default function ReceiptUpload() {
                 },
                 extractedData: extractedFields,
                 editedData: {...extractedFields},
-                serverId: result.id,  // Guardamos el ID del servidor para futuras operaciones
+                imageUrl: result.imageUrl, // Guardamos la URL del archivo
               };
             }
             return r;

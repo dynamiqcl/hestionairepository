@@ -470,34 +470,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Nueva ruta para subir boletas (solo para guardado final de datos procesados)
-  app.post("/api/receipts", ensureAuth, async (req, res) => {
+  // Nuevo endpoint simple para guardar boletas con todos los datos
+  app.post("/api/receipts/save", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
-      // Este endpoint solo debe manejar datos JSON (guardado final)
-      const isJsonRequest = req.headers['content-type']?.includes('application/json');
+      let imageUrl = null;
 
-      if (!isJsonRequest) {
-        return res.status(400).json({ 
-          error: "Este endpoint solo acepta datos JSON procesados" 
-        });
+      // Si hay un archivo, guardarlo
+      if (req.file) {
+        imageUrl = `/uploads/receipts/${req.file.filename}`;
       }
 
-      // Datos ya procesados - usar la información del formulario
-      const imageUrl = req.body.imageUrl;
-
-      // Usar los datos del formulario directamente (ya están procesados)
+      // Usar los datos del formulario
       const receiptDate = new Date(req.body.date);
-      const receiptTotal = parseFloat(req.body.total.toString());
+      const receiptTotal = parseFloat(req.body.total);
       const receiptVendor = req.body.vendor;
       const receiptCategory = req.body.category;
       const receiptDescription = req.body.description || "";
       
       // Obtener el categoryId basado en el nombre de la categoría
-      const categoryId = await db
+      let categoryId = await db
         .select({ id: categories.id })
         .from(categories)
         .where(eq(categories.name, receiptCategory))
         .then(rows => rows[0]?.id);
+
+      // Si no existe la categoría, crear una nueva
+      if (!categoryId) {
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: receiptCategory,
+            description: `Categoría creada automáticamente`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        categoryId = newCategory.id;
+      }
 
       // Obtener el último receiptId
       const lastReceipt = await db
@@ -513,9 +521,9 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         userId: req.user!.id,
         date: receiptDate,
-        total: receiptTotal,
+        total: receiptTotal.toString(),
         vendor: receiptVendor,
-        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : Math.round(receiptTotal * 0.19),
+        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount) : Math.round(receiptTotal * 0.19),
         receiptId: nextId,
         categoryId,
         companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
@@ -528,12 +536,10 @@ export function registerRoutes(app: Express): Server {
         .values(receiptData)
         .returning();
 
-      res.json({
-        ...newReceipt
-      });
+      res.json(newReceipt);
     } catch (error) {
-      console.error("Error al agregar la boleta:", error);
-      res.status(500).json({ error: "Error al agregar la boleta" });
+      console.error("Error al guardar la boleta:", error);
+      res.status(500).json({ error: "Error al guardar la boleta" });
     }
   });
 

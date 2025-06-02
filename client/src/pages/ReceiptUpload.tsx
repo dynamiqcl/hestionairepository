@@ -335,30 +335,24 @@ export default function ReceiptUpload() {
     }
 
     // Validar campos obligatorios
-
     const validationErrors: string[] = [];
     
-    // Verificar empresa
     if (!receipt.editedData.companyId) {
       validationErrors.push('Empresa');
     }
     
-    // Verificar categoría
     if (!receipt.editedData.category) {
       validationErrors.push('Categoría');
     }
     
-    // Verificar descripción
     if (!receipt.editedData.description) {
       validationErrors.push('Descripción');
     }
     
-    // Verificar fecha
     if (!receipt.editedData.date) {
       validationErrors.push('Fecha del documento');
     }
     
-    // Verificar monto total
     if (!receipt.editedData.total || receipt.editedData.total <= 0) {
       validationErrors.push('Monto total');
     }
@@ -373,26 +367,22 @@ export default function ReceiptUpload() {
     }
 
     try {
-      // Preparar los datos para enviar
-      const receiptData = {
-        date: receipt.editedData.date.toISOString(),
-        total: receipt.editedData.total,
-        vendor: receipt.editedData.vendor,
-        category: receipt.editedData.category,
-        description: receipt.editedData.description,
-        companyId: receipt.editedData.companyId,
-        taxAmount: receipt.editedData.taxAmount,
-        imageUrl: receipt.imageUrl, // Usar la URL de imagen ya guardada
-        rawText: receipt.editedData.description || receipt.extractedData?.vendor || ''
-      };
+      // Crear FormData para enviar la imagen junto con los datos
+      const formData = new FormData();
+      formData.append('image', receipt.file);
+      formData.append('date', receipt.editedData.date.toISOString());
+      formData.append('total', receipt.editedData.total.toString());
+      formData.append('vendor', receipt.editedData.vendor);
+      formData.append('category', receipt.editedData.category);
+      formData.append('description', receipt.editedData.description || '');
+      formData.append('companyId', receipt.editedData.companyId?.toString() || '');
+      formData.append('taxAmount', receipt.editedData.taxAmount?.toString() || '');
+      formData.append('rawText', receipt.editedData.description || receipt.extractedData?.vendor || '');
 
-      // Enviar la solicitud al servidor
-      const response = await fetch('/api/receipts', {
+      // Enviar una sola vez con FormData
+      const response = await fetch('/api/receipts/save', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(receiptData),
+        body: formData,
         credentials: 'include'
       });
 
@@ -400,9 +390,6 @@ export default function ReceiptUpload() {
         throw new Error(await response.text());
       }
       
-      // Invalidar la caché para que se actualice la lista de boletas
-      // Aquí NO llamamos a addReceipt porque la boleta ya ha sido guardada por el servidor
-      // y eso causaría una duplicación
       queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });
 
       toast({
@@ -410,7 +397,6 @@ export default function ReceiptUpload() {
         description: "La boleta ha sido procesada y guardada correctamente",
       });
 
-      // Eliminar la boleta procesada de la lista
       setReceipts(prev => prev.filter(r => r.id !== receipt.id));
     } catch (error) {
       console.error('Error al guardar la boleta:', error);

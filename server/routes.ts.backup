@@ -975,7 +975,96 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ENDPOINT DESHABILITADO - Usar /api/receipts/save para evitar duplicaciones
+  /*
+  app.post("/api/receipts", ensureAuth, async (req, res) => {
+    try {
+      const {
+        date,
+        total,
+        vendor,
+        category,
+        description,
+        companyId,
+        taxAmount,
+        rawText,
+        imageUrl
+      } = req.body;
 
+      // Validaciones básicas
+      if (!date || !total || !companyId) {
+        return res.status(400).json({ 
+          error: "Faltan campos obligatorios: fecha, total y companyId" 
+        });
+      }
+
+      const receiptDate = new Date(date);
+      const receiptTotal = parseFloat(total);
+
+      // Obtener el categoryId basado en el nombre de la categoría
+      let categoryId = null;
+      if (category) {
+        const existingCategory = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.name, category))
+          .limit(1);
+
+        if (existingCategory.length > 0) {
+          categoryId = existingCategory[0].id;
+        } else {
+          // Crear nueva categoría
+          const [newCategory] = await db
+            .insert(categories)
+            .values({
+              name: category,
+              description: `Categoría creada automáticamente`,
+              createdBy: req.user!.id
+            })
+            .returning();
+          categoryId = newCategory.id;
+        }
+      }
+
+      // Obtener el último receiptId para generar el siguiente
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
+      // Insertar nueva boleta
+      const [newReceipt] = await db.insert(receipts).values({
+        userId: req.user!.id,
+        receiptId: nextId,
+        date: receiptDate,
+        total: receiptTotal.toString(),
+        vendor: vendor || '',
+        categoryId: categoryId,
+        companyId: parseInt(companyId),
+        taxAmount: parseFloat(taxAmount) || Math.round(receiptTotal * 0.19),
+        rawText: rawText || description || '',
+        imageUrl: imageUrl || null
+      }).returning();
+
+      res.json({ 
+        success: true, 
+        receipt: newReceipt,
+        message: "Boleta guardada correctamente" 
+      });
+
+    } catch (error) {
+      console.error("Error al guardar boleta:", error);
+      res.status(500).json({ 
+        error: "Error interno del servidor al guardar la boleta" 
+      });
+    }
+  });
+  */
 
   // Upload de boletas
   app.post("/api/receipts/upload", upload.single("receipt"), async (req, res) => {

@@ -282,8 +282,8 @@ export default function ReceiptsManager() {
               <div className="space-y-2">
                 <Label>Categoría</Label>
                 <Select 
-                  value={filters.category} 
-                  onValueChange={(value) => setFilters({...filters, category: value})}
+                  value={filters.category || undefined} 
+                  onValueChange={(value) => setFilters({...filters, category: value || ''})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas las categorías" />
@@ -302,8 +302,8 @@ export default function ReceiptsManager() {
               <div className="space-y-2">
                 <Label>Empresa</Label>
                 <Select 
-                  value={filters.company} 
-                  onValueChange={(value) => setFilters({...filters, company: value})}
+                  value={filters.company || undefined} 
+                  onValueChange={(value) => setFilters({...filters, company: value || ''})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas las empresas" />

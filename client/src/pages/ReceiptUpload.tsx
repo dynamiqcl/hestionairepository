@@ -280,7 +280,7 @@ export default function ReceiptUpload() {
   };
 
   const handleSave = async (receipt: ReceiptData) => {
-    if (!receipt.editedData || !receipt.file) {
+    if (!receipt.editedData) {
       toast({
         title: "Error",
         description: "La boleta no ha sido procesada correctamente. Por favor, inténtalo de nuevo.",
@@ -322,27 +322,31 @@ export default function ReceiptUpload() {
     }
 
     try {
-      // Crear FormData para enviar la imagen junto con los datos
-      const formData = new FormData();
-      formData.append('image', receipt.file);
-      formData.append('date', receipt.editedData.date.toISOString());
-      formData.append('total', receipt.editedData.total.toString());
-      formData.append('vendor', receipt.editedData.vendor);
-      formData.append('category', receipt.editedData.category);
-      formData.append('description', receipt.editedData.description || '');
-      formData.append('companyId', receipt.editedData.companyId?.toString() || '');
-      formData.append('taxAmount', receipt.editedData.taxAmount?.toString() || '');
-      formData.append('rawText', receipt.editedData.description || receipt.extractedData?.vendor || '');
+      // Enviar solo los datos JSON sin archivo (ya procesado anteriormente)
+      const receiptData = {
+        date: receipt.editedData.date.toISOString(),
+        total: receipt.editedData.total,
+        vendor: receipt.editedData.vendor,
+        category: receipt.editedData.category,
+        description: receipt.editedData.description || '',
+        companyId: receipt.editedData.companyId,
+        taxAmount: receipt.editedData.taxAmount || Math.round(receipt.editedData.total * 0.19),
+        rawText: receipt.editedData.description || receipt.extractedData?.vendor || '',
+        imageUrl: receipt.imageUrl // Usar la URL de imagen ya procesada
+      };
 
-      // Enviar una sola vez con FormData
-      const response = await fetch('/api/receipts/save', {
+      const response = await fetch('/api/receipts', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(receiptData),
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });

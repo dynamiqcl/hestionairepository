@@ -244,19 +244,19 @@ export function registerRoutes(app: Express): Server {
     try {
       const { id } = req.params;
       const { newPassword, ...userData } = req.body;
-      
+
       // Preparar los datos a actualizar
       const updateData = {
         ...userData,
         updatedAt: new Date(),
       };
-      
+
       // Si se proporciona una nueva contraseña, la hasheamos
       if (newPassword && newPassword.trim() !== '') {
         const hashedPassword = await crypto.hash(newPassword);
         updateData.password = hashedPassword;
       }
-      
+
       // Actualizar usuario en la base de datos
       const [updatedUser] = await db
         .update(users)
@@ -437,14 +437,14 @@ export function registerRoutes(app: Express): Server {
 
       if (req.file) {
         const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-        
+
         console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
         const analysisResult = await analyzeReceiptImage(filePath);
         console.log("Resultado del análisis OpenAI:", analysisResult);
-        
+
         if (analysisResult.success) {
           extractedData = analysisResult.extractedData;
-          
+
           // Devolver solo los datos extraídos sin guardar en la base de datos
           res.json({
             success: true,
@@ -460,7 +460,7 @@ export function registerRoutes(app: Express): Server {
         success: false, 
         error: "No se pudo procesar la imagen" 
       });
-      
+
     } catch (error) {
       console.error("Error al procesar la imagen:", error);
       res.status(500).json({ 
@@ -486,7 +486,7 @@ export function registerRoutes(app: Express): Server {
       const receiptVendor = req.body.vendor;
       const receiptCategory = req.body.category;
       const receiptDescription = req.body.description || "";
-      
+
       // Obtener el categoryId basado en el nombre de la categoría
       let categoryId = await db
         .select({ id: categories.id })
@@ -565,7 +565,7 @@ export function registerRoutes(app: Express): Server {
 
       const receiptDate = new Date(date);
       const receiptTotal = parseFloat(total);
-      
+
       // Obtener el categoryId basado en el nombre de la categoría
       let categoryId = await db
         .select({ id: categories.id })
@@ -731,22 +731,22 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ success: false, error: "Error al eliminar la boleta" });
     }
   });
-  
+
   // Ruta para subir y procesar PDFs de boletas con OpenAI
   app.post("/api/receipts/pdf", ensureAuth, uploadReceiptPdf.single('pdf'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No se ha subido ningún archivo PDF" });
       }
-      
+
       // Ruta al archivo PDF subido
       const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
       const imageUrl = `/uploads/receipts/${req.file.filename}`;
-      
+
       console.log("Analizando PDF de boleta con OpenAI (solo procesamiento)...");
       const analysisResult = await analyzeReceiptImage(pdfPath);
       console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
-      
+
       // Si el análisis con OpenAI falló, devolver error
       if (!analysisResult.success) {
         return res.status(422).json({
@@ -755,14 +755,14 @@ export function registerRoutes(app: Express): Server {
           details: analysisResult.message
         });
       }
-      
+
       // Devolver solo los datos extraídos sin guardar en la base de datos
       res.json({
         success: true,
         extractedData: analysisResult.extractedData,
         imageUrl: imageUrl
       });
-      
+
     } catch (error) {
       console.error("Error al procesar PDF de boleta:", error);
       res.status(500).json({ 
@@ -867,58 +867,59 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/user-messages/:userId", ensureAuth, async (req, res) => {
     try {
       const { userId } = req.params;
-      
+
       // El administrador puede ver cualquier mensaje, pero los usuarios regulares solo los suyos
       if (req.user?.role !== UserRole.ADMINISTRADOR && req.user?.id !== parseInt(userId)) {
         return res.status(403).json({ error: "No tienes permiso para ver este mensaje" });
       }
-      
+
       const messages = await db
         .select()
         .from(userMessages)
         .where(eq(userMessages.userId, parseInt(userId)))
         .orderBy(desc(userMessages.createdAt));
-      
+
       // Retornar el mensaje activo más reciente
       const activeMessage = messages.find(msg => msg.isActive);
-      
+
       res.json(activeMessage || null);
     } catch (error) {
       console.error("Error al obtener mensaje de usuario:", error);
       res.status(500).json({ error: "Error al obtener mensaje de usuario" });
     }
   });
-  
+
   // Crear o actualizar mensaje para un usuario (solo administrador)
   app.post("/api/user-messages/:userId", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { message } = req.body;
-      
+
       if (!userId || !message) {
         return res.status(400).json({ error: "El ID de usuario y el mensaje son requeridos" });
       }
-      
+
       // Validar que el usuario existe
       const [userExists] = await db
         .select()
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-        
+
       if (!userExists) {
         return res.status(404).json({ error: "Usuario no encontrado" });
       }
-      
+
       // Desactivar mensajes anteriores
       await db
         .update(userMessages)
         .set({ isActive: false })
         .where(eq(userMessages.userId, userId));
-      
+
       // Crear nuevo mensaje
       const [newMessage] = await db
-        .insert(userMessages)
+        .insert(```text
+userMessages)
         .values({
           userId,
           message,
@@ -927,24 +928,24 @@ export function registerRoutes(app: Express): Server {
           updatedAt: new Date()
         })
         .returning();
-      
+
       res.json(newMessage);
     } catch (error) {
       console.error("Error al crear mensaje de usuario:", error);
       res.status(500).json({ error: "Error al crear mensaje de usuario" });
     }
   });
-  
+
   // Actualizar estado de un mensaje (activar/desactivar)
   app.patch("/api/user-messages/:userId/:id/status", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { isActive } = req.body;
-      
+
       if (isActive === undefined) {
         return res.status(400).json({ error: "El estado del mensaje es requerido" });
       }
-      
+
       const [updatedMessage] = await db
         .update(userMessages)
         .set({ 
@@ -953,18 +954,18 @@ export function registerRoutes(app: Express): Server {
         })
         .where(eq(userMessages.id, parseInt(id)))
         .returning();
-        
+
       if (!updatedMessage) {
         return res.status(404).json({ error: "Mensaje no encontrado" });
       }
-      
+
       res.json(updatedMessage);
     } catch (error) {
       console.error("Error al actualizar mensaje:", error);
       res.status(500).json({ error: "Error al actualizar mensaje" });
     }
   });
-  
+
   // Actualizar contenido de un mensaje - endpoint simplificado
   app.put("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
@@ -972,16 +973,16 @@ export function registerRoutes(app: Express): Server {
       console.log("PUT /api/user-messages/:userId/:id - Request body:", req.body);
       console.log("PUT /api/user-messages/:userId/:id - Request body type:", typeof req.body);
       console.log("PUT /api/user-messages/:userId/:id - Request headers:", req.headers);
-      
+
       // Obtener los parámetros de la URL
       const id = parseInt(req.params.id);
       const userId = parseInt(req.params.userId);
-      
+
       // Verificar si el cuerpo de la solicitud es válido
       if (!req.body) {
         return res.status(400).json({ error: "No se recibió el contenido de la solicitud" });
       }
-      
+
       // Extraer el mensaje del cuerpo, con varias alternativas para flexibilidad
       let messageContent = null;
       if (typeof req.body === 'string') {
@@ -999,14 +1000,14 @@ export function registerRoutes(app: Express): Server {
           messageContent = req.body[keys[0]];
         }
       }
-      
+
       console.log("PUT /api/user-messages - Extracted message:", messageContent);
-      
+
       // Validar que tengamos un mensaje
       if (!messageContent || (typeof messageContent === 'string' && !messageContent.trim())) {
         return res.status(400).json({ error: "El mensaje no puede estar vacío" });
       }
-      
+
       const [updatedMessage] = await db
         .update(userMessages)
         .set({ 
@@ -1018,38 +1019,105 @@ export function registerRoutes(app: Express): Server {
           eq(userMessages.userId, userId)
         ))
         .returning();
-        
+
       if (!updatedMessage) {
         return res.status(404).json({ error: "Mensaje no encontrado" });
       }
-      
+
       res.json(updatedMessage);
     } catch (error) {
       console.error("Error al actualizar contenido del mensaje:", error);
       res.status(500).json({ error: "Error al actualizar contenido del mensaje" });
     }
   });
-  
+
   // Eliminar mensaje
   app.delete("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = parseInt(req.params.userId);
-      
+
       await db
         .delete(userMessages)
         .where(and(
           eq(userMessages.id, id),
           eq(userMessages.userId, userId)
         ));
-        
+
       res.json({ message: "Mensaje eliminado correctamente" });
     } catch (error) {
       console.error("Error al eliminar mensaje:", error);
       res.status(500).json({ error: "Error al eliminar mensaje" });
     }
   });
-  
+
+// Guardar boleta con datos JSON (sin archivo)
+app.post("/api/receipts", async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "No autorizado" });
+    }
+
+    const {
+      date,
+      total,
+      vendor,
+      category,
+      description,
+      companyId,
+      taxAmount,
+      rawText,
+      imageUrl
+    } = req.body;
+
+    // Validaciones básicas
+    if (!date || !total || !companyId) {
+      return res.status(400).json({ 
+        error: "Faltan campos obligatorios: fecha, total y companyId" 
+      });
+    }
+
+    // Insertar en la base de datos
+    const newReceipt = await db.insert(receipts).values({
+      userId: req.user.id,
+      date: new Date(date),
+      total: parseFloat(total),
+      vendor: vendor || '',
+      category: category || '',
+      description: description || '',
+      companyId: parseInt(companyId),
+      taxAmount: parseFloat(taxAmount) || Math.round(parseFloat(total) * 0.19),
+      rawText: rawText || '',
+      imageUrl: imageUrl || ''
+    }).returning();
+
+    res.json({ 
+      success: true, 
+      receipt: newReceipt[0],
+      message: "Boleta guardada correctamente" 
+    });
+
+  } catch (error) {
+    console.error("Error al guardar boleta:", error);
+    res.status(500).json({ 
+      error: "Error interno del servidor al guardar la boleta" 
+    });
+  }
+});
+
+  // Upload de boletas
+  app.post("/api/receipts/upload", upload.single("receipt"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se proporcionó ningún archivo" });
+      }
+      res.json({ message: "Archivo subido correctamente" });
+    } catch (error) {
+      console.error("Error al subir el archivo:", error);
+      res.status(500).json({ error: "Error al subir el archivo" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

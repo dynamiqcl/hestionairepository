@@ -47,6 +47,7 @@ interface ReceiptData {
   validation: ValidationResult | null;
   extractedData: ExtractedData | null;
   editedData: (ExtractedData & { companyId?: number; description?: string }) | null;
+  imageUrl?: string;
 }
 
 function useCategories() {
@@ -182,8 +183,8 @@ export default function ReceiptUpload() {
           const imageFormData = new FormData();
           imageFormData.append('image', file);
           
-          // Enviar a la API del servidor
-          const response = await fetch('/api/receipts', {
+          // Enviar a la API del servidor (solo procesamiento, sin guardar)
+          const response = await fetch('/api/receipts/process', {
             method: 'POST',
             body: imageFormData,
           });
@@ -195,15 +196,15 @@ export default function ReceiptUpload() {
           const result = await response.json();
           console.log('Respuesta del servidor (Imagen):', result);
           
-          if (result.aiExtracted) {
+          if (result.success && result.extractedData) {
             // Si OpenAI extrajo datos correctamente, usamos esos
             const extractedFields = {
-              date: new Date(result.date),
-              total: result.total,
-              vendor: result.vendor,
-              category: result.category || 'Otros',
-              taxAmount: result.taxAmount || Math.round(result.total * 0.19),
-              description: result.rawText || '',
+              date: new Date(result.extractedData.date),
+              total: result.extractedData.total,
+              vendor: result.extractedData.vendor,
+              category: result.extractedData.category || 'Otros',
+              taxAmount: result.extractedData.taxAmount || Math.round(result.extractedData.total * 0.19),
+              description: result.extractedData.description || '',
             };
             
             setReceipts(prev => prev.map(r => {
@@ -218,7 +219,7 @@ export default function ReceiptUpload() {
                   },
                   extractedData: extractedFields,
                   editedData: {...extractedFields},
-                  serverId: result.id,
+                  imageUrl: result.imageUrl, // Guardamos la URL de la imagen
                 };
               }
               return r;
@@ -231,7 +232,7 @@ export default function ReceiptUpload() {
             
             return;
           } else {
-            // Si OpenAI falló pero la API respondió, continuamos con Tesseract
+            // Si OpenAI falló, continuamos con Tesseract
             openAIFailed = true;
           }
         } catch (error) {
@@ -372,29 +373,26 @@ export default function ReceiptUpload() {
     }
 
     try {
-      // Crear FormData para enviar la imagen
-      const formData = new FormData();
-      formData.append('image', receipt.file);
-
-      // Agregar los demás datos del recibo
-      Object.entries(receipt.editedData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          if (value instanceof Date) {
-            formData.append(key, value.toISOString());
-          } else {
-            formData.append(key, value.toString());
-          }
-        }
-      });
-
-      if (receipt.extractedData?.vendor) {
-        formData.append('rawText', receipt.extractedData.vendor);
-      }
+      // Preparar los datos para enviar
+      const receiptData = {
+        date: receipt.editedData.date.toISOString(),
+        total: receipt.editedData.total,
+        vendor: receipt.editedData.vendor,
+        category: receipt.editedData.category,
+        description: receipt.editedData.description,
+        companyId: receipt.editedData.companyId,
+        taxAmount: receipt.editedData.taxAmount,
+        imageUrl: receipt.imageUrl, // Usar la URL de imagen ya guardada
+        rawText: receipt.editedData.description || receipt.extractedData?.vendor || ''
+      };
 
       // Enviar la solicitud al servidor
       const response = await fetch('/api/receipts', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(receiptData),
         credentials: 'include'
       });
 

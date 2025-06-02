@@ -404,6 +404,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Nueva ruta para solo procesar imágenes sin guardar (para preview)
+  app.post("/api/receipts/process", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
+    try {
+      let extractedData = null;
+
+      if (req.file) {
+        const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+        
+        console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
+        const analysisResult = await analyzeReceiptImage(filePath);
+        console.log("Resultado del análisis OpenAI:", analysisResult);
+        
+        if (analysisResult.success) {
+          extractedData = analysisResult.extractedData;
+          
+          // Devolver solo los datos extraídos sin guardar en la base de datos
+          res.json({
+            success: true,
+            extractedData: extractedData,
+            imageUrl: `/uploads/receipts/${req.file.filename}`
+          });
+          return;
+        }
+      }
+
+      // Si OpenAI falla o no hay archivo, devolver error
+      res.status(400).json({ 
+        success: false, 
+        error: "No se pudo procesar la imagen" 
+      });
+      
+    } catch (error) {
+      console.error("Error al procesar la imagen:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Error al procesar la imagen" 
+      });
+    }
+  });
+
   // Nueva ruta para subir boletas con imágenes (incluyendo análisis con OpenAI)
   app.post("/api/receipts", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
@@ -411,21 +451,29 @@ export function registerRoutes(app: Express): Server {
       let imageUrl = null;
       let extractedData = null;
 
-      // Procesamiento de la imagen con OpenAI si hay un archivo subido
-      if (req.file) {
-        imageUrl = `/uploads/receipts/${req.file.filename}`;
-        const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-        
-        console.log("Analizando imagen de boleta con OpenAI...");
-        const analysisResult = await analyzeReceiptImage(filePath);
-        console.log("Resultado del análisis OpenAI:", analysisResult);
-        
-        if (analysisResult.success) {
-          extractedData = analysisResult.extractedData;
-        }
-      } else if (req.body.imageUrl) {
-        // Si se proporciona una URL de imagen directamente
+      // Verificar si es una solicitud JSON (datos ya procesados) o FormData (nueva imagen)
+      const isJsonRequest = req.headers['content-type']?.includes('application/json');
+
+      if (isJsonRequest) {
+        // Datos ya procesados - usar la URL de imagen existente
         imageUrl = req.body.imageUrl;
+      } else {
+        // Nueva imagen - procesamiento de la imagen con OpenAI si hay un archivo subido
+        if (req.file) {
+          imageUrl = `/uploads/receipts/${req.file.filename}`;
+          const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+          
+          console.log("Analizando imagen de boleta con OpenAI...");
+          const analysisResult = await analyzeReceiptImage(filePath);
+          console.log("Resultado del análisis OpenAI:", analysisResult);
+          
+          if (analysisResult.success) {
+            extractedData = analysisResult.extractedData;
+          }
+        } else if (req.body.imageUrl) {
+          // Si se proporciona una URL de imagen directamente
+          imageUrl = req.body.imageUrl;
+        }
       }
 
       // Utilizar datos de OpenAI si están disponibles, de lo contrario usar los datos del formulario

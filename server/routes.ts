@@ -543,6 +543,85 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Nuevo endpoint para guardar solo datos (sin archivo)
+  app.post("/api/receipts/save-data", ensureAuth, async (req, res) => {
+    try {
+      const {
+        date,
+        total,
+        vendor,
+        category,
+        description,
+        companyId,
+        taxAmount,
+        rawText,
+        imageUrl
+      } = req.body;
+
+      // Validar datos requeridos
+      if (!date || !total || !vendor || !category) {
+        return res.status(400).json({ error: "Faltan datos requeridos" });
+      }
+
+      const receiptDate = new Date(date);
+      const receiptTotal = parseFloat(total);
+      
+      // Obtener el categoryId basado en el nombre de la categoría
+      let categoryId = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.name, category))
+        .then(rows => rows[0]?.id);
+
+      // Si no existe la categoría, crear una nueva
+      if (!categoryId) {
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: category,
+            description: `Categoría creada automáticamente`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        categoryId = newCategory.id;
+      }
+
+      // Obtener el último receiptId
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
+      const receiptData = {
+        userId: req.user!.id,
+        date: receiptDate,
+        total: receiptTotal.toString(),
+        vendor: vendor,
+        taxAmount: taxAmount || Math.round(receiptTotal * 0.19),
+        receiptId: nextId,
+        categoryId,
+        companyId: companyId || null,
+        rawText: rawText || description || "",
+        imageUrl: imageUrl || null
+      };
+
+      const [newReceipt] = await db
+        .insert(receipts)
+        .values(receiptData)
+        .returning();
+
+      res.json(newReceipt);
+    } catch (error) {
+      console.error("Error al guardar la boleta:", error);
+      res.status(500).json({ error: "Error al guardar la boleta" });
+    }
+  });
+
   // Update existing receipt
   app.put("/api/receipts/:id", ensureAuth, async (req, res) => {
     try {

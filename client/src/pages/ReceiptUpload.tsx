@@ -280,7 +280,7 @@ export default function ReceiptUpload() {
   };
 
   const handleSave = async (receipt: ReceiptData) => {
-    if (!receipt.editedData) {
+    if (!receipt.extractedData) {
       toast({
         title: "Error",
         description: "La boleta no ha sido procesada correctamente. Por favor, inténtalo de nuevo.",
@@ -289,26 +289,32 @@ export default function ReceiptUpload() {
       return;
     }
 
+    // Combinar datos extraídos con datos editados
+    const finalData = {
+      ...receipt.extractedData,
+      ...receipt.editedData
+    };
+
     // Validar campos obligatorios
     const validationErrors: string[] = [];
 
-    if (!receipt.editedData.companyId) {
+    if (!finalData.companyId) {
       validationErrors.push('Empresa');
     }
 
-    if (!receipt.editedData.category) {
+    if (!finalData.category) {
       validationErrors.push('Categoría');
     }
 
-    if (!receipt.editedData.description) {
+    if (!finalData.description) {
       validationErrors.push('Descripción');
     }
 
-    if (!receipt.editedData.date) {
+    if (!finalData.date) {
       validationErrors.push('Fecha del documento');
     }
 
-    if (!receipt.editedData.total || receipt.editedData.total <= 0) {
+    if (!finalData.total || finalData.total <= 0) {
       validationErrors.push('Monto total');
     }
 
@@ -324,14 +330,14 @@ export default function ReceiptUpload() {
     try {
       // Enviar solo los datos JSON sin archivo (ya procesado anteriormente)
       const receiptData = {
-        date: receipt.editedData.date.toISOString(),
-        total: receipt.editedData.total,
-        vendor: receipt.editedData.vendor,
-        category: receipt.editedData.category,
-        description: receipt.editedData.description || '',
-        companyId: receipt.editedData.companyId,
-        taxAmount: receipt.editedData.taxAmount || Math.round(receipt.editedData.total * 0.19),
-        rawText: receipt.editedData.description || receipt.extractedData?.vendor || '',
+        date: finalData.date.toISOString(),
+        total: finalData.total,
+        vendor: finalData.vendor,
+        category: finalData.category,
+        description: finalData.description || '',
+        companyId: finalData.companyId,
+        taxAmount: finalData.taxAmount || Math.round(finalData.total * 0.19),
+        rawText: finalData.description || receipt.extractedData?.vendor || '',
         imageUrl: receipt.imageUrl // Usar la URL de imagen ya procesada
       };
 
@@ -458,17 +464,18 @@ export default function ReceiptUpload() {
                   <Loader2 className="h-8 w-8 animate-spin" />
                   <span className="ml-2">Procesando boleta...</span>
                 </div>
-              ) : receipt.editedData ? (
+              ) : receipt.extractedData ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor={`company-${receipt.id}`}>Empresa</Label>
                     <Select
-                      value={receipt.editedData.companyId?.toString()}
+                      value={receipt.editedData?.companyId?.toString() || ""}
                       onValueChange={(value) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
+                        if (r.id === receipt.id) {
                           return {
                             ...r,
                             editedData: {
+                              ...r.extractedData!,
                               ...r.editedData,
                               companyId: parseInt(value, 10)
                             }
@@ -493,12 +500,13 @@ export default function ReceiptUpload() {
                   <div className="space-y-2">
                     <Label htmlFor={`category-${receipt.id}`}>Categoría</Label>
                     <Select
-                      value={receipt.editedData.category}
+                      value={receipt.editedData?.category || receipt.extractedData.category || ""}
                       onValueChange={(value) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
+                        if (r.id === receipt.id) {
                           return {
                             ...r,
                             editedData: {
+                              ...r.extractedData!,
                               ...r.editedData,
                               category: value
                             }
@@ -524,12 +532,13 @@ export default function ReceiptUpload() {
                     <Label htmlFor={`description-${receipt.id}`}>Descripción</Label>
                     <Input
                       id={`description-${receipt.id}`}
-                      value={receipt.editedData.description || ''}
+                      value={receipt.editedData?.description || receipt.extractedData.description || ''}
                       onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
+                        if (r.id === receipt.id) {
                           return {
                             ...r,
                             editedData: {
+                              ...r.extractedData!,
                               ...r.editedData,
                               description: e.target.value
                             }
@@ -546,12 +555,13 @@ export default function ReceiptUpload() {
                     <Input
                       id={`date-${receipt.id}`}
                       type="date"
-                      value={format(receipt.editedData.date, 'yyyy-MM-dd')}
+                      value={format(receipt.editedData?.date || receipt.extractedData.date, 'yyyy-MM-dd')}
                       onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
+                        if (r.id === receipt.id) {
                           return {
                             ...r,
                             editedData: {
+                              ...r.extractedData!,
                               ...r.editedData,
                               date: new Date(e.target.value)
                             }
@@ -567,13 +577,14 @@ export default function ReceiptUpload() {
                     <Input
                       id={`total-${receipt.id}`}
                       type="number"
-                      value={receipt.editedData.total}
+                      value={receipt.editedData?.total || receipt.extractedData.total}
                       onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id && r.editedData) {
+                        if (r.id === receipt.id) {
                           const value = parseFloat(e.target.value);
                           return {
                             ...r,
                             editedData: {
+                              ...r.extractedData!,
                               ...r.editedData,
                               total: value,
                               taxAmount: value * 0.19

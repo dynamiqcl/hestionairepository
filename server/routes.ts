@@ -433,33 +433,34 @@ export function registerRoutes(app: Express): Server {
   // Nueva ruta para solo procesar imágenes sin guardar (para preview)
   app.post("/api/receipts/process", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
-      let extractedData = null;
-
-      if (req.file) {
-        const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-
-        console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
-        const analysisResult = await analyzeReceiptImage(filePath);
-        console.log("Resultado del análisis OpenAI:", analysisResult);
-
-        if (analysisResult.success) {
-          extractedData = analysisResult.extractedData;
-
-          // Devolver solo los datos extraídos sin guardar en la base de datos
-          res.json({
-            success: true,
-            extractedData: extractedData,
-            imageUrl: `/uploads/receipts/${req.file.filename}`
-          });
-          return;
-        }
+      if (!req.file) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "No se proporcionó ningún archivo" 
+        });
       }
 
-      // Si OpenAI falla o no hay archivo, devolver error
-      res.status(400).json({ 
-        success: false, 
-        error: "No se pudo procesar la imagen" 
-      });
+      const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+
+      console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
+      const analysisResult = await analyzeReceiptImage(filePath);
+      console.log("Resultado del análisis OpenAI:", analysisResult);
+
+      if (analysisResult.success && analysisResult.extractedData) {
+        // Devolver solo los datos extraídos sin guardar en la base de datos
+        res.json({
+          success: true,
+          extractedData: analysisResult.extractedData,
+          imageUrl: `/uploads/receipts/${req.file.filename}`
+        });
+      } else {
+        // Si OpenAI falla, devolver error
+        res.status(422).json({ 
+          success: false, 
+          error: "No se pudo extraer información de la imagen",
+          details: analysisResult.message || "Error desconocido"
+        });
+      }
 
     } catch (error) {
       console.error("Error al procesar la imagen:", error);
@@ -586,7 +587,10 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/receipts/pdf", ensureAuth, uploadReceiptPdf.single('pdf'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "No se ha subido ningún archivo PDF" });
+        return res.status(400).json({ 
+          success: false, 
+          error: "No se ha subido ningún archivo PDF" 
+        });
       }
 
       // Ruta al archivo PDF subido
@@ -598,11 +602,11 @@ export function registerRoutes(app: Express): Server {
       console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
 
       // Si el análisis con OpenAI falló, devolver error
-      if (!analysisResult.success) {
+      if (!analysisResult.success || !analysisResult.extractedData) {
         return res.status(422).json({
           success: false,
           error: "No se pudo extraer información del PDF",
-          details: analysisResult.message
+          details: analysisResult.message || "Error desconocido"
         });
       }
 

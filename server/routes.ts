@@ -471,7 +471,78 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  
+  // Nuevo endpoint simple para guardar boletas con todos los datos
+  app.post("/api/receipts/save", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
+    try {
+      let imageUrl = null;
+
+      // Si hay un archivo, guardarlo
+      if (req.file) {
+        imageUrl = `/uploads/receipts/${req.file.filename}`;
+      }
+
+      // Usar los datos del formulario
+      const receiptDate = new Date(req.body.date);
+      const receiptTotal = parseFloat(req.body.total);
+      const receiptVendor = req.body.vendor;
+      const receiptCategory = req.body.category;
+      const receiptDescription = req.body.description || "";
+      
+      // Obtener el categoryId basado en el nombre de la categoría
+      let categoryId = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.name, receiptCategory))
+        .then(rows => rows[0]?.id);
+
+      // Si no existe la categoría, crear una nueva
+      if (!categoryId) {
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: receiptCategory,
+            description: `Categoría creada automáticamente`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        categoryId = newCategory.id;
+      }
+
+      // Obtener el último receiptId
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
+      const receiptData = {
+        userId: req.user!.id,
+        date: receiptDate,
+        total: receiptTotal.toString(),
+        vendor: receiptVendor,
+        taxAmount: req.body.taxAmount ? req.body.taxAmount.toString() : Math.round(receiptTotal * 0.19).toString(),
+        receiptId: nextId,
+        categoryId,
+        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
+        rawText: receiptDescription || req.body.rawText || "",
+        imageUrl
+      };
+
+      const [newReceipt] = await db
+        .insert(receipts)
+        .values(receiptData)
+        .returning();
+
+      res.json(newReceipt);
+    } catch (error) {
+      console.error("Error al guardar la boleta:", error);
+      res.status(500).json({ error: "Error al guardar la boleta" });
+    }
+  });
 
   // Update existing receipt
   app.put("/api/receipts/:id", ensureAuth, async (req, res) => {
@@ -904,7 +975,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Endpoint principal para guardar boletas - único endpoint para evitar duplicaciones
+  // ENDPOINT DESHABILITADO - Usar /api/receipts/save para evitar duplicaciones
+  /*
   app.post("/api/receipts", ensureAuth, async (req, res) => {
     try {
       const {
@@ -992,6 +1064,7 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
+  */
 
   // Upload de boletas
   app.post("/api/receipts/upload", upload.single("receipt"), async (req, res) => {

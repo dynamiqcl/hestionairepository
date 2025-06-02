@@ -283,13 +283,13 @@ export default function ReceiptsManager() {
                 <Label>Categoría</Label>
                 <Select 
                   value={filters.category || undefined} 
-                  onValueChange={(value) => setFilters({...filters, category: value || ''})}
+                  onValueChange={(value) => setFilters({...filters, category: value === "all" ? '' : (value || '')})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las categorías</SelectItem>
+                    <SelectItem value="all">Todas las categorías</SelectItem>
                     {(Array.isArray(categories) ? categories : []).map((category: any) => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}
@@ -303,13 +303,13 @@ export default function ReceiptsManager() {
                 <Label>Empresa</Label>
                 <Select 
                   value={filters.company || undefined} 
-                  onValueChange={(value) => setFilters({...filters, company: value || ''})}
+                  onValueChange={(value) => setFilters({...filters, company: value === "all" ? '' : (value || '')})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas las empresas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las empresas</SelectItem>
+                    <SelectItem value="all">Todas las empresas</SelectItem>
                     {(Array.isArray(companies) ? companies : []).map((company: any) => (
                       <SelectItem key={company.id} value={company.name}>
                         {company.name}

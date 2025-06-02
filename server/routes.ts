@@ -977,16 +977,110 @@ export function registerRoutes(app: Express): Server {
 
 
 
-  // Upload de boletas
-  app.post("/api/receipts/upload", upload.single("receipt"), async (req, res) => {
+  // NUEVO SISTEMA DE BOLETAS - SOLO ANÁLISIS (SIN GUARDAR)
+  app.post("/api/receipts/analyze", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "No se proporcionó ningún archivo" });
+        return res.status(400).json({ error: "No se proporcionó archivo" });
       }
-      res.json({ message: "Archivo subido correctamente" });
+
+      // Solo analizar y extraer datos, NO guardar en BD
+      const filePath = req.file.path;
+      const analysisResult = await analyzeReceiptImage(filePath);
+      
+      res.json(analysisResult);
     } catch (error) {
-      console.error("Error al subir el archivo:", error);
-      res.status(500).json({ error: "Error al subir el archivo" });
+      console.error("Error al analizar imagen:", error);
+      res.status(500).json({ error: "Error al analizar la imagen" });
+    }
+  });
+
+  // NUEVO SISTEMA DE BOLETAS - SOLO GUARDAR (UNA SOLA VEZ)
+  app.post("/api/receipts/create", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
+    try {
+      let imageUrl = null;
+      
+      // Guardar archivo si existe
+      if (req.file) {
+        imageUrl = `/uploads/receipts/${req.file.filename}`;
+      }
+
+      const {
+        date,
+        total,
+        vendor,
+        category,
+        description,
+        companyId,
+        taxAmount
+      } = req.body;
+
+      // Validaciones estrictas
+      if (!date || !total || !companyId || !category || !description) {
+        return res.status(400).json({ 
+          error: "Todos los campos marcados como obligatorios son requeridos" 
+        });
+      }
+
+      // Obtener categoryId
+      let categoryRecord = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.name, category))
+        .limit(1);
+
+      let categoryId: number;
+      if (categoryRecord.length === 0) {
+        // Crear categoría si no existe
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: category,
+            description: `Categoría: ${category}`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        categoryId = newCategory.id;
+      } else {
+        categoryId = categoryRecord[0].id;
+      }
+
+      // Generar receiptId único
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextReceiptId = lastReceipt.length > 0 
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
+      // Insertar boleta UNA SOLA VEZ
+      const [newReceipt] = await db
+        .insert(receipts)
+        .values({
+          userId: req.user!.id,
+          companyId: parseInt(companyId),
+          categoryId,
+          receiptId: nextReceiptId,
+          date: new Date(date),
+          total: parseFloat(total).toString(),
+          vendor: vendor || '',
+          taxAmount: taxAmount ? parseFloat(taxAmount).toString() : Math.round(parseFloat(total) * 0.19).toString(),
+          rawText: description,
+          imageUrl
+        })
+        .returning();
+
+      res.json({
+        success: true,
+        receipt: newReceipt
+      });
+
+    } catch (error) {
+      console.error("Error al crear boleta:", error);
+      res.status(500).json({ error: "Error al crear la boleta" });
     }
   });
 

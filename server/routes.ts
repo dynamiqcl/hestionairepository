@@ -470,157 +470,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Nuevo endpoint simple para guardar boletas con todos los datos
-  app.post("/api/receipts/save", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
-    try {
-      let imageUrl = null;
-
-      // Si hay un archivo, guardarlo
-      if (req.file) {
-        imageUrl = `/uploads/receipts/${req.file.filename}`;
-      }
-
-      // Usar los datos del formulario
-      const receiptDate = new Date(req.body.date);
-      const receiptTotal = parseFloat(req.body.total);
-      const receiptVendor = req.body.vendor;
-      const receiptCategory = req.body.category;
-      const receiptDescription = req.body.description || "";
-
-      // Obtener el categoryId basado en el nombre de la categoría
-      let categoryId = await db
-        .select({ id: categories.id })
-        .from(categories)
-        .where(eq(categories.name, receiptCategory))
-        .then(rows => rows[0]?.id);
-
-      // Si no existe la categoría, crear una nueva
-      if (!categoryId) {
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: receiptCategory,
-            description: `Categoría creada automáticamente`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        categoryId = newCategory.id;
-      }
-
-      // Obtener el último receiptId
-      const lastReceipt = await db
-        .select({ receiptId: receipts.receiptId })
-        .from(receipts)
-        .orderBy(desc(receipts.id))
-        .limit(1);
-
-      const nextId = lastReceipt.length > 0
-        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
-        : "1";
-
-      const receiptData = {
-        userId: req.user!.id,
-        date: receiptDate,
-        total: receiptTotal.toString(),
-        vendor: receiptVendor,
-        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount) : Math.round(receiptTotal * 0.19),
-        receiptId: nextId,
-        categoryId,
-        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
-        rawText: receiptDescription || req.body.rawText || "",
-        imageUrl
-      };
-
-      const [newReceipt] = await db
-        .insert(receipts)
-        .values(receiptData)
-        .returning();
-
-      res.json(newReceipt);
-    } catch (error) {
-      console.error("Error al guardar la boleta:", error);
-      res.status(500).json({ error: "Error al guardar la boleta" });
-    }
-  });
-
-  // Nuevo endpoint para guardar solo datos (sin archivo)
-  app.post("/api/receipts/save-data", ensureAuth, async (req, res) => {
-    try {
-      const {
-        date,
-        total,
-        vendor,
-        category,
-        description,
-        companyId,
-        taxAmount,
-        rawText,
-        imageUrl
-      } = req.body;
-
-      // Validar datos requeridos
-      if (!date || !total || !vendor || !category) {
-        return res.status(400).json({ error: "Faltan datos requeridos" });
-      }
-
-      const receiptDate = new Date(date);
-      const receiptTotal = parseFloat(total);
-
-      // Obtener el categoryId basado en el nombre de la categoría
-      let categoryId = await db
-        .select({ id: categories.id })
-        .from(categories)
-        .where(eq(categories.name, category))
-        .then(rows => rows[0]?.id);
-
-      // Si no existe la categoría, crear una nueva
-      if (!categoryId) {
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: category,
-            description: `Categoría creada automáticamente`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        categoryId = newCategory.id;
-      }
-
-      // Obtener el último receiptId
-      const lastReceipt = await db
-        .select({ receiptId: receipts.receiptId })
-        .from(receipts)
-        .orderBy(desc(receipts.id))
-        .limit(1);
-
-      const nextId = lastReceipt.length > 0
-        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
-        : "1";
-
-      const receiptData = {
-        userId: req.user!.id,
-        date: receiptDate,
-        total: receiptTotal.toString(),
-        vendor: vendor,
-        taxAmount: taxAmount || Math.round(receiptTotal * 0.19),
-        receiptId: nextId,
-        categoryId,
-        companyId: companyId || null,
-        rawText: rawText || description || "",
-        imageUrl: imageUrl || null
-      };
-
-      const [newReceipt] = await db
-        .insert(receipts)
-        .values(receiptData)
-        .returning();
-
-      res.json(newReceipt);
-    } catch (error) {
-      console.error("Error al guardar la boleta:", error);
-      res.status(500).json({ error: "Error al guardar la boleta" });
-    }
-  });
+  
 
   // Update existing receipt
   app.put("/api/receipts/:id", ensureAuth, async (req, res) => {
@@ -918,8 +768,7 @@ export function registerRoutes(app: Express): Server {
 
       // Crear nuevo mensaje
       const [newMessage] = await db
-        .insert(```text
-userMessages)
+        .insert(userMessages)
         .values({
           userId,
           message,
@@ -1051,59 +900,94 @@ userMessages)
     }
   });
 
-// Guardar boleta con datos JSON (sin archivo)
-app.post("/api/receipts", async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ error: "No autorizado" });
-    }
+  // Endpoint principal para guardar boletas - único endpoint para evitar duplicaciones
+  app.post("/api/receipts", ensureAuth, async (req, res) => {
+    try {
+      const {
+        date,
+        total,
+        vendor,
+        category,
+        description,
+        companyId,
+        taxAmount,
+        rawText,
+        imageUrl
+      } = req.body;
 
-    const {
-      date,
-      total,
-      vendor,
-      category,
-      description,
-      companyId,
-      taxAmount,
-      rawText,
-      imageUrl
-    } = req.body;
+      // Validaciones básicas
+      if (!date || !total || !companyId) {
+        return res.status(400).json({ 
+          error: "Faltan campos obligatorios: fecha, total y companyId" 
+        });
+      }
 
-    // Validaciones básicas
-    if (!date || !total || !companyId) {
-      return res.status(400).json({ 
-        error: "Faltan campos obligatorios: fecha, total y companyId" 
+      const receiptDate = new Date(date);
+      const receiptTotal = parseFloat(total);
+
+      // Obtener el categoryId basado en el nombre de la categoría
+      let categoryId = null;
+      if (category) {
+        const existingCategory = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.name, category))
+          .limit(1);
+
+        if (existingCategory.length > 0) {
+          categoryId = existingCategory[0].id;
+        } else {
+          // Crear nueva categoría
+          const [newCategory] = await db
+            .insert(categories)
+            .values({
+              name: category,
+              description: `Categoría creada automáticamente`,
+              createdBy: req.user!.id
+            })
+            .returning();
+          categoryId = newCategory.id;
+        }
+      }
+
+      // Obtener el último receiptId para generar el siguiente
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+
+      // Insertar nueva boleta
+      const [newReceipt] = await db.insert(receipts).values({
+        userId: req.user!.id,
+        receiptId: nextId,
+        date: receiptDate,
+        total: receiptTotal.toString(),
+        vendor: vendor || '',
+        categoryId: categoryId,
+        companyId: parseInt(companyId),
+        taxAmount: parseFloat(taxAmount) || Math.round(receiptTotal * 0.19),
+        rawText: rawText || description || '',
+        imageUrl: imageUrl || null
+      }).returning();
+
+      res.json({ 
+        success: true, 
+        receipt: newReceipt,
+        message: "Boleta guardada correctamente" 
+      });
+
+    } catch (error) {
+      console.error("Error al guardar boleta:", error);
+      res.status(500).json({ 
+        error: "Error interno del servidor al guardar la boleta" 
       });
     }
-
-    // Insertar en la base de datos
-    const newReceipt = await db.insert(receipts).values({
-      userId: req.user.id,
-      date: new Date(date),
-      total: parseFloat(total),
-      vendor: vendor || '',
-      category: category || '',
-      description: description || '',
-      companyId: parseInt(companyId),
-      taxAmount: parseFloat(taxAmount) || Math.round(parseFloat(total) * 0.19),
-      rawText: rawText || '',
-      imageUrl: imageUrl || ''
-    }).returning();
-
-    res.json({ 
-      success: true, 
-      receipt: newReceipt[0],
-      message: "Boleta guardada correctamente" 
-    });
-
-  } catch (error) {
-    console.error("Error al guardar boleta:", error);
-    res.status(500).json({ 
-      error: "Error interno del servidor al guardar la boleta" 
-    });
-  }
-});
+  });
 
   // Upload de boletas
   app.post("/api/receipts/upload", upload.single("receipt"), async (req, res) => {

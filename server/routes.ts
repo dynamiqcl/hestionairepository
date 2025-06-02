@@ -470,44 +470,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Nueva ruta para subir boletas con imágenes (incluyendo análisis con OpenAI)
-  app.post("/api/receipts", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
+  // Nueva ruta para subir boletas (solo para guardado final de datos procesados)
+  app.post("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      const date = new Date();
-      let imageUrl = null;
-      let extractedData = null;
-
-      // Verificar si es una solicitud JSON (datos ya procesados) o FormData (nueva imagen)
+      // Este endpoint solo debe manejar datos JSON (guardado final)
       const isJsonRequest = req.headers['content-type']?.includes('application/json');
 
-      if (isJsonRequest) {
-        // Datos ya procesados - usar la URL de imagen existente
-        imageUrl = req.body.imageUrl;
-      } else {
-        // Nueva imagen - procesamiento de la imagen con OpenAI si hay un archivo subido
-        if (req.file) {
-          imageUrl = `/uploads/receipts/${req.file.filename}`;
-          const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-          
-          console.log("Analizando imagen de boleta con OpenAI...");
-          const analysisResult = await analyzeReceiptImage(filePath);
-          console.log("Resultado del análisis OpenAI:", analysisResult);
-          
-          if (analysisResult.success) {
-            extractedData = analysisResult.extractedData;
-          }
-        } else if (req.body.imageUrl) {
-          // Si se proporciona una URL de imagen directamente
-          imageUrl = req.body.imageUrl;
-        }
+      if (!isJsonRequest) {
+        return res.status(400).json({ 
+          error: "Este endpoint solo acepta datos JSON procesados" 
+        });
       }
 
-      // Utilizar datos de OpenAI si están disponibles, de lo contrario usar los datos del formulario
-      const receiptDate = extractedData?.date || new Date(req.body.date);
-      const receiptTotal = extractedData?.total || parseFloat(req.body.total.toString());
-      const receiptVendor = extractedData?.vendor || req.body.vendor;
-      const receiptCategory = extractedData?.category || req.body.category;
-      const receiptDescription = extractedData?.description || req.body.description || "";
+      // Datos ya procesados - usar la información del formulario
+      const imageUrl = req.body.imageUrl;
+
+      // Usar los datos del formulario directamente (ya están procesados)
+      const receiptDate = new Date(req.body.date);
+      const receiptTotal = parseFloat(req.body.total.toString());
+      const receiptVendor = req.body.vendor;
+      const receiptCategory = req.body.category;
+      const receiptDescription = req.body.description || "";
       
       // Obtener el categoryId basado en el nombre de la categoría
       const categoryId = await db
@@ -546,8 +529,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       res.json({
-        ...newReceipt,
-        aiExtracted: extractedData ? true : false
+        ...newReceipt
       });
     } catch (error) {
       console.error("Error al agregar la boleta:", error);

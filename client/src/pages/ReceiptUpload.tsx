@@ -1,631 +1,403 @@
-import { useState, useRef } from "react";
-import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useReceipts } from "@/hooks/use-receipts";
-import { Loader2, Upload, CheckCircle2, X, FileText } from "lucide-react";
-import Tesseract from 'tesseract.js';
-import { categorizeReceipt } from "@/lib/categorize";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format } from "date-fns";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Upload, FileText, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface ValidationResult {
-  isValid: boolean;
-  validationIssues: string[];
-  confidence: {
-    overall: number;
-    category: number;
-    amount: number;
-    date: number;
-    vendor: number;
-  };
+interface Company {
+  id: number;
+  name: string;
+  rut: string;
 }
 
-interface ExtractedData {
-  date: Date;
-  total: number;
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface ReceiptForm {
+  file: File | null;
+  date: string;
+  total: string;
   vendor: string;
   category: string;
-  taxAmount: number;
+  description: string;
+  companyId: string;
+  taxAmount: string;
 }
 
-interface ReceiptData {
-  id: string;
-  file: File;
-  preview: string;
-  isProcessing: boolean;
-  validation: ValidationResult | null;
-  extractedData: ExtractedData | null;
-  editedData: (ExtractedData & { companyId?: number; description?: string }) | null;
-  imageUrl?: string;
-}
-
-function useCategories() {
-  return useQuery<{ id: number, name: string, description: string }[]>({
-    queryKey: ['/api/categories'],
-    queryFn: async () => {
-      const response = await fetch('/api/categories');
-      if (!response.ok) throw new Error('Error al obtener categorías');
-      return response.json();
-    }
+export default function ReceiptUploadNew() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [form, setForm] = useState<ReceiptForm>({
+    file: null,
+    date: new Date().toISOString().split('T')[0],
+    total: '',
+    vendor: '',
+    category: '',
+    description: '',
+    companyId: '',
+    taxAmount: ''
   });
-}
 
-function useCompanies() {
-  return useQuery<{ id: number, name: string }[]>({
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  // Obtener empresas
+  const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
     queryFn: async () => {
-      const response = await fetch('/api/companies');
-      if (!response.ok) throw new Error('Error al obtener empresas');
-      return response.json();
+      const res = await fetch('/api/companies', { credentials: 'include' });
+      if (!res.ok) throw new Error('Error al cargar empresas');
+      return res.json();
     }
   });
-}
 
-export default function ReceiptUpload() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const { addReceipt } = useReceipts();
-  const [receipts, setReceipts] = useState<ReceiptData[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { data: companies } = useCompanies();
-  const { data: categories } = useCategories();
-  const queryClient = useQueryClient();
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    const newReceipts: ReceiptData[] = Array.from(files).map(file => ({
-      id: Math.random().toString(36).substring(7),
-      file,
-      // No creamos URL para previsualizaciones de PDFs, solo para imágenes
-      preview: file.type.includes('pdf') ? '' : URL.createObjectURL(file),
-      isProcessing: true,
-      validation: null,
-      extractedData: null,
-      editedData: null
-    }));
-
-    setReceipts(prev => [...prev, ...newReceipts]);
-
-    // Procesar todas las boletas en paralelo
-    await Promise.all(newReceipts.map(receipt => processImage(receipt.id, receipt.file)));
-  };
-
-  const processImage = async (receiptId: string, file: File) => {
-    try {
-      // Establecer estado inicial procesando
-      setReceipts(prev => prev.map(r => {
-        if (r.id === receiptId) {
-          return { ...r, isProcessing: true };
-        }
-        return r;
-      }));
-
-      // Usar una única ruta de procesamiento sin guardar en base de datos
-        let extractedFields = null;
-        let tempImageUrl = null;
-
-        if (file.type.includes('pdf')) {
-          // Para PDFs, usar la API especializada
-          const pdfFormData = new FormData();
-          pdfFormData.append('pdf', file);
-
-          const response = await fetch('/api/receipts/pdf', {
-            method: 'POST',
-            body: pdfFormData,
-          });
-
-          if (!response.ok) {
-            throw new Error(`Error al procesar PDF: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          console.log('Respuesta del servidor (PDF):', result);
-
-          if (result.success && result.extractedData) {
-            extractedFields = {
-              date: new Date(result.extractedData.date),
-              total: result.extractedData.total,
-              vendor: result.extractedData.vendor,
-              category: result.extractedData.category,
-              taxAmount: result.extractedData.taxAmount || Math.round(result.extractedData.total * 0.19),
-              description: result.extractedData.description || '',
-            };
-            tempImageUrl = result.imageUrl;
-
-            toast({
-              title: "PDF procesado correctamente",
-              description: `Se procesó el PDF ${file.name} con éxito usando IA.`,
-            });
-          } else {
-            throw new Error('No se pudo extraer información del PDF');
-          }
-        } else {
-          // Para imágenes, intentar primero con OpenAI
-          let openAISuccess = false;
-
-          try {
-            const imageFormData = new FormData();
-            imageFormData.append('image', file);
-
-            const response = await fetch('/api/receipts/process', {
-              method: 'POST',
-              body: imageFormData,
-            });
-
-            if (response.ok) {
-              const result = await response.json();
-              console.log('Respuesta del servidor (Imagen):', result);
-
-              if (result.success && result.extractedData) {
-                extractedFields = {
-                  date: new Date(result.extractedData.date),
-                  total: result.extractedData.total,
-                  vendor: result.extractedData.vendor,
-                  category: result.extractedData.category || 'Otros',
-                  taxAmount: result.extractedData.taxAmount || Math.round(result.extractedData.total * 0.19),
-                  description: result.extractedData.description || '',
-                };
-                tempImageUrl = result.imageUrl;
-                openAISuccess = true;
-
-                toast({
-                  title: "Imagen procesada con IA",
-                  description: `Se procesó la imagen ${file.name} con éxito usando IA.`,
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Error al procesar con OpenAI, intentando con Tesseract:', error);
-          }
-
-          // Si OpenAI falló, usar Tesseract como respaldo
-          if (!openAISuccess) {
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            await new Promise((resolve) => (img.onload = resolve));
-
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error("No se pudo crear el contexto 2D");
-
-            ctx.drawImage(img, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-            const result = await Tesseract.recognize(file, 'spa', {
-              logger: m => console.log(m)
-            });
-            const text = result.data.text;
-
-            console.log('Texto extraído por Tesseract:', text);
-
-            const receiptData = await categorizeReceipt(text, imageData);
-            console.log('Datos procesados localmente:', receiptData);
-
-            extractedFields = {
-              date: receiptData.date,
-              total: receiptData.total,
-              vendor: receiptData.vendor,
-              category: receiptData.category,
-              taxAmount: receiptData.taxAmount,
-              description: text.substring(0, 200) || '',
-            };
-
-            toast({
-              title: "Imagen procesada localmente",
-              description: `La IA en la nube no pudo procesar la imagen, se usó procesamiento local.`,
-            });
-          }
-        }
-
-        // Actualizar el estado con los datos extraídos (pero no guardar aún en BD)
-        if (extractedFields) {
-          setReceipts(prev => prev.map(r => {
-            if (r.id === receiptId) {
-              return {
-                ...r,
-                isProcessing: false,
-                validation: {
-                  isValid: true,
-                  validationIssues: [],
-                  confidence: { overall: 0.9, category: 0.9, amount: 0.9, date: 0.9, vendor: 0.9 }
-                },
-                extractedData: extractedFields,
-                editedData: {...extractedFields},
-                imageUrl: tempImageUrl,
-              };
-            }
-            return r;
-          }));
-        } else {
-          throw new Error('No se pudo extraer información del archivo');
-        }
-
-
-    } catch (error) {
-      console.error('Error al procesar la boleta:', error);
-      toast({
-        title: "Error",
-        description: `Error al procesar la boleta ${file.name}. ${error instanceof Error ? error.message : "Por favor, intente nuevamente."}`,
-        variant: "destructive",
-      });
-
-      setReceipts(prev => prev.map(r => {
-        if (r.id === receiptId) {
-          return { 
-            ...r, 
-            isProcessing: false,
-            validation: null,
-            extractedData: null,
-            editedData: null
-          };
-        }
-        return r;
-      }));
+  // Obtener categorías
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories', { credentials: 'include' });
+      if (!res.ok) throw new Error('Error al cargar categorías');
+      return res.json();
     }
-  };
+  });
 
-  const handleSave = async (receipt: ReceiptData) => {
-    if (!receipt.extractedData) {
-      toast({
-        title: "Error",
-        description: "La boleta no ha sido procesada correctamente. Por favor, inténtalo de nuevo.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Combinar datos extraídos con datos editados
-    const finalData = {
-      ...receipt.extractedData,
-      ...receipt.editedData
-    };
-
-    // Validar campos obligatorios
-    const validationErrors: string[] = [];
-
-    if (!finalData.companyId) {
-      validationErrors.push('Empresa');
-    }
-
-    if (!finalData.category) {
-      validationErrors.push('Categoría');
-    }
-
-    if (!finalData.description) {
-      validationErrors.push('Descripción');
-    }
-
-    if (!finalData.date) {
-      validationErrors.push('Fecha del documento');
-    }
-
-    if (!finalData.total || finalData.total <= 0) {
-      validationErrors.push('Monto total');
-    }
-
-    if (validationErrors.length > 0) {
-      toast({
-        title: "Campos obligatorios",
-        description: `Por favor completa los siguientes campos: ${validationErrors.join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Enviar solo los datos JSON sin archivo (ya procesado anteriormente)
-      const receiptData = {
-        date: finalData.date.toISOString(),
-        total: finalData.total,
-        vendor: finalData.vendor,
-        category: finalData.category,
-        description: finalData.description || '',
-        companyId: finalData.companyId,
-        taxAmount: finalData.taxAmount || Math.round(finalData.total * 0.19),
-        rawText: finalData.description || receipt.extractedData?.vendor || '',
-        imageUrl: receipt.imageUrl // Usar la URL de imagen ya procesada
-      };
-
-      const response = await fetch('/api/receipts', {
+  // Mutación para procesar imagen y extraer datos
+  const processImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch('/api/receipts/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(receiptData),
+        body: formData,
         credentials: 'include'
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });
-
+      
+      if (!res.ok) throw new Error('Error al procesar la imagen');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // Actualizar el formulario con los datos extraídos
+      setForm(prev => ({
+        ...prev,
+        vendor: data.vendor || prev.vendor,
+        total: data.total ? data.total.toString() : prev.total,
+        date: data.date ? new Date(data.date).toISOString().split('T')[0] : prev.date,
+        category: data.category || prev.category,
+        taxAmount: data.taxAmount ? data.taxAmount.toString() : prev.taxAmount
+      }));
+      
       toast({
-        title: "¡Éxito!",
-        description: "La boleta ha sido procesada y guardada correctamente",
+        title: "Imagen procesada",
+        description: "Los datos han sido extraídos automáticamente. Revísalos antes de guardar."
       });
-
-      setReceipts(prev => prev.filter(r => r.id !== receipt.id));
-    } catch (error) {
-      console.error('Error al guardar la boleta:', error);
+    },
+    onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo guardar la boleta. Por favor, intente nuevamente.",
-        variant: "destructive",
+        description: "No se pudo procesar la imagen: " + error.message,
+        variant: "destructive"
       });
+    }
+  });
+
+  // Mutación para guardar boleta
+  const saveReceiptMutation = useMutation({
+    mutationFn: async (receiptData: ReceiptForm) => {
+      const formData = new FormData();
+      
+      if (receiptData.file) {
+        formData.append('image', receiptData.file);
+      }
+      
+      formData.append('date', receiptData.date);
+      formData.append('total', receiptData.total);
+      formData.append('vendor', receiptData.vendor);
+      formData.append('category', receiptData.category);
+      formData.append('description', receiptData.description);
+      formData.append('companyId', receiptData.companyId);
+      formData.append('taxAmount', receiptData.taxAmount);
+      
+      const res = await fetch('/api/receipts/create', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "¡Éxito!",
+        description: "La boleta ha sido guardada correctamente"
+      });
+      
+      // Limpiar formulario
+      setForm({
+        file: null,
+        date: new Date().toISOString().split('T')[0],
+        total: '',
+        vendor: '',
+        category: '',
+        description: '',
+        companyId: '',
+        taxAmount: ''
+      });
+      setPreview(null);
+      
+      // Invalidar caché
+      queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la boleta: " + error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast({
+        title: "Archivo no válido",
+        description: "Solo se permiten imágenes y archivos PDF",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setForm(prev => ({ ...prev, file }));
+
+    // Crear preview
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
     }
   };
 
-  const handleRemoveReceipt = (receiptId: string) => {
-    setReceipts(prev => prev.filter(r => r.id !== receiptId));
+  const handleProcessImage = () => {
+    if (!form.file) {
+      toast({
+        title: "Error",
+        description: "Primero selecciona un archivo",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    processImageMutation.mutate(form.file, {
+      onSettled: () => setIsProcessing(false)
+    });
+  };
+
+  const handleSave = () => {
+    // Validaciones
+    const errors: string[] = [];
+    
+    if (!form.companyId) errors.push('Empresa');
+    if (!form.category) errors.push('Categoría');
+    if (!form.description) errors.push('Descripción');
+    if (!form.date) errors.push('Fecha');
+    if (!form.total || parseFloat(form.total) <= 0) errors.push('Monto total válido');
+
+    if (errors.length > 0) {
+      toast({
+        title: "Campos obligatorios",
+        description: `Completa: ${errors.join(', ')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    saveReceiptMutation.mutate(form);
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <Card className="mb-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <Card>
         <CardHeader>
-          <CardTitle>Subir Boletas</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Subir Nueva Boleta
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="receipt">Imágenes y PDFs de Boletas</Label>
-              <div className="mt-2">
-                <div className="flex flex-col items-center justify-center w-full">
-                  <label
-                    htmlFor="receipt"
-                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                      <p className="text-sm text-center text-muted-foreground px-4">
-                        Haz clic para seleccionar múltiples boletas
-                      </p>
-                      <p className="text-xs text-center text-blue-500">
-                        ¡Nuevo! Procesamiento mejorado con Inteligencia Artificial
-                      </p>
-                    </div>
-                    <Input
-                      ref={fileInputRef}
-                      id="receipt"
-                      type="file"
-                      accept="image/*,application/pdf"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <small className="mt-2 text-xs text-center text-muted-foreground">
-                      Formatos permitidos: JPEG, PNG, PDF. Tamaño máximo: 5MB
-                    </small>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {receipts.map((receipt) => (
-        <Card key={receipt.id} className="mb-4">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">
-                {receipt.file.name}
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveReceipt(receipt.id)}
+        <CardContent className="space-y-6">
+          {/* Upload de archivo */}
+          <div className="space-y-2">
+            <Label htmlFor="file">Archivo de la boleta</Label>
+            <div className="flex items-center gap-4">
+              <Input
+                id="file"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleProcessImage}
+                disabled={!form.file || isProcessing}
+                variant="outline"
               >
-                <X className="h-4 w-4" />
+                {isProcessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Procesar
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="w-full h-48 border rounded-lg overflow-hidden">
-                {receipt.file.type.includes('pdf') ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
-                    <FileText className="h-24 w-24 text-primary mb-2" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium">Documento PDF</p>
-                      <p className="text-xs text-muted-foreground">{receipt.file.name}</p>
-                      <p className="text-xs text-muted-foreground mt-2">No hay vista previa disponible</p>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={receipt.preview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
+          </div>
 
-              {receipt.isProcessing ? (
-                <div className="flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                  <span className="ml-2">Procesando boleta...</span>
-                </div>
-              ) : receipt.extractedData ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`company-${receipt.id}`}>Empresa</Label>
-                    <Select
-                      value={receipt.editedData?.companyId?.toString() || ""}
-                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.extractedData!,
-                              ...r.editedData,
-                              companyId: parseInt(value, 10)
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies?.map((company: any) => (
-                          <SelectItem key={company.id} value={company.id.toString()}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`category-${receipt.id}`}>Categoría</Label>
-                    <Select
-                      value={receipt.editedData?.category || receipt.extractedData.category || ""}
-                      onValueChange={(value) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.extractedData!,
-                              ...r.editedData,
-                              category: value
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name} - {category.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`description-${receipt.id}`}>Descripción</Label>
-                    <Input
-                      id={`description-${receipt.id}`}
-                      value={receipt.editedData?.description || receipt.extractedData.description || ''}
-                      onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.extractedData!,
-                              ...r.editedData,
-                              description: e.target.value
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                      placeholder="Ingrese una descripción"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`date-${receipt.id}`}>Fecha del documento</Label>
-                    <Input
-                      id={`date-${receipt.id}`}
-                      type="date"
-                      value={format(receipt.editedData?.date || receipt.extractedData.date, 'yyyy-MM-dd')}
-                      onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id) {
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.extractedData!,
-                              ...r.editedData,
-                              date: new Date(e.target.value)
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`total-${receipt.id}`}>Monto Total</Label>
-                    <Input
-                      id={`total-${receipt.id}`}
-                      type="number"
-                      value={receipt.editedData?.total || receipt.extractedData.total}
-                      onChange={(e) => setReceipts(prev => prev.map(r => {
-                        if (r.id === receipt.id) {
-                          const value = parseFloat(e.target.value);
-                          return {
-                            ...r,
-                            editedData: {
-                              ...r.extractedData!,
-                              ...r.editedData,
-                              total: value,
-                              taxAmount: value * 0.19
-                            }
-                          };
-                        }
-                        return r;
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => handleSave(receipt)}
-                      className="w-full md:w-auto"
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Guardar Boleta
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    Error al procesar la boleta. Por favor, inténtalo de nuevo.
-                  </p>
-                </div>
-              )}
+          {/* Preview */}
+          {preview && (
+            <div className="space-y-2">
+              <Label>Vista previa</Label>
+              <img 
+                src={preview} 
+                alt="Preview" 
+                className="max-w-md h-auto rounded border"
+              />
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          )}
 
-      <div className="flex justify-end space-x-2 mt-4">
-        <Button
-          variant="outline"
-          onClick={() => setLocation("/")}
-        >
-          Cancelar
-        </Button>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Empresa */}
+            <div className="space-y-2">
+              <Label htmlFor="company">Empresa *</Label>
+              <Select value={form.companyId} onValueChange={(value) => setForm(prev => ({ ...prev, companyId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id.toString()}>
+                      {company.name} - {company.rut}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Categoría */}
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría *</Label>
+              <Select value={form.category} onValueChange={(value) => setForm(prev => ({ ...prev, category: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Proveedor */}
+            <div className="space-y-2">
+              <Label htmlFor="vendor">Proveedor</Label>
+              <Input
+                id="vendor"
+                value={form.vendor}
+                onChange={(e) => setForm(prev => ({ ...prev, vendor: e.target.value }))}
+                placeholder="Nombre del proveedor"
+              />
+            </div>
+
+            {/* Fecha */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Fecha del documento *</Label>
+              <Input
+                id="date"
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm(prev => ({ ...prev, date: e.target.value }))}
+              />
+            </div>
+
+            {/* Monto total */}
+            <div className="space-y-2">
+              <Label htmlFor="total">Monto total (CLP) *</Label>
+              <Input
+                id="total"
+                type="number"
+                value={form.total}
+                onChange={(e) => setForm(prev => ({ ...prev, total: e.target.value }))}
+                placeholder="0"
+                min="0"
+                step="1"
+              />
+            </div>
+
+            {/* IVA */}
+            <div className="space-y-2">
+              <Label htmlFor="taxAmount">IVA (CLP)</Label>
+              <Input
+                id="taxAmount"
+                type="number"
+                value={form.taxAmount}
+                onChange={(e) => setForm(prev => ({ ...prev, taxAmount: e.target.value }))}
+                placeholder="Calculado automáticamente"
+                min="0"
+                step="1"
+              />
+            </div>
+          </div>
+
+          {/* Descripción */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripción *</Label>
+            <Textarea
+              id="description"
+              value={form.description}
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Descripción detallada del gasto"
+              rows={3}
+            />
+          </div>
+
+          {/* Botón guardar */}
+          <Button 
+            onClick={handleSave}
+            disabled={saveReceiptMutation.isPending}
+            className="w-full"
+            size="lg"
+          >
+            {saveReceiptMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Guardando...
+              </>
+            ) : (
+              'Guardar Boleta'
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

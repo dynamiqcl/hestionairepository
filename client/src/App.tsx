@@ -1,7 +1,6 @@
 import { Switch, Route } from "wouter";
 import Dashboard from "./pages/Dashboard";
 import ReceiptUpload from "./pages/ReceiptUpload";
-import ReceiptUploadNew from "./pages/ReceiptUploadNew";
 import ReceiptsManager from "./pages/ReceiptsManager";
 import AuthPage from "./pages/AuthPage";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,8 +34,7 @@ function AppContent() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/upload" component={ReceiptUploadNew} />
-        <Route path="/upload-old" component={ReceiptUpload} />
+        <Route path="/upload" component={ReceiptUpload} />
         <Route path="/receipts" component={ReceiptsManager} />
         <Route path="/categories" component={CategoryManager} />
         <Route path="/tables" component={TablesViewer} />

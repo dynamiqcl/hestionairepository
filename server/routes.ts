@@ -368,35 +368,61 @@ export function registerRoutes(app: Express): Server {
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      let query = db
-        .select({
-          id: receipts.id,
-          userId: receipts.userId,
-          username: users.username,
-          receiptId: receipts.receiptId,
-          date: receipts.date,
-          total: receipts.total,
-          vendor: receipts.vendor,
-          categoryId: receipts.categoryId,
-          category: categories.name,
-          taxAmount: receipts.taxAmount,
-          rawText: receipts.rawText,
-          imageUrl: receipts.imageUrl,
-          createdAt: receipts.createdAt,
-          updatedAt: receipts.updatedAt,
-          companyName: companies.name,
-        })
-        .from(receipts)
-        .leftJoin(companies, eq(receipts.companyId, companies.id))
-        .leftJoin(categories, eq(receipts.categoryId, categories.id))
-        .leftJoin(users, eq(receipts.userId, users.id));
+      let allReceipts;
 
-      // Si no es admin, filtrar solo las boletas del usuario
-      if (req.user?.role !== UserRole.ADMINISTRADOR) {
-        query = query.where(eq(receipts.userId, req.user!.id));
+      if (req.user?.role === UserRole.ADMINISTRADOR) {
+        // Si es admin, obtener todas las boletas
+        allReceipts = await db
+          .select({
+            id: receipts.id,
+            userId: receipts.userId,
+            username: users.username,
+            receiptId: receipts.receiptId,
+            date: receipts.date,
+            total: receipts.total,
+            vendor: receipts.vendor,
+            categoryId: receipts.categoryId,
+            category: categories.name,
+            taxAmount: receipts.taxAmount,
+            rawText: receipts.rawText,
+            imageUrl: receipts.imageUrl,
+            createdAt: receipts.createdAt,
+            updatedAt: receipts.updatedAt,
+            companyName: companies.name,
+          })
+          .from(receipts)
+          .leftJoin(companies, eq(receipts.companyId, companies.id))
+          .leftJoin(categories, eq(receipts.categoryId, categories.id))
+          .leftJoin(users, eq(receipts.userId, users.id))
+          .orderBy(desc(receipts.createdAt));
+      } else {
+        // Si no es admin, filtrar solo las boletas del usuario
+        allReceipts = await db
+          .select({
+            id: receipts.id,
+            userId: receipts.userId,
+            username: users.username,
+            receiptId: receipts.receiptId,
+            date: receipts.date,
+            total: receipts.total,
+            vendor: receipts.vendor,
+            categoryId: receipts.categoryId,
+            category: categories.name,
+            taxAmount: receipts.taxAmount,
+            rawText: receipts.rawText,
+            imageUrl: receipts.imageUrl,
+            createdAt: receipts.createdAt,
+            updatedAt: receipts.updatedAt,
+            companyName: companies.name,
+          })
+          .from(receipts)
+          .leftJoin(companies, eq(receipts.companyId, companies.id))
+          .leftJoin(categories, eq(receipts.categoryId, categories.id))
+          .leftJoin(users, eq(receipts.userId, users.id))
+          .where(eq(receipts.userId, req.user!.id))
+          .orderBy(desc(receipts.createdAt));
       }
 
-      const allReceipts = await query.orderBy(desc(receipts.date));
       res.json(allReceipts);
     } catch (error) {
       console.error("Error al obtener las boletas:", error);

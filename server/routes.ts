@@ -244,19 +244,19 @@ export function registerRoutes(app: Express): Server {
     try {
       const { id } = req.params;
       const { newPassword, ...userData } = req.body;
-
+      
       // Preparar los datos a actualizar
       const updateData = {
         ...userData,
         updatedAt: new Date(),
       };
-
+      
       // Si se proporciona una nueva contraseña, la hasheamos
       if (newPassword && newPassword.trim() !== '') {
         const hashedPassword = await crypto.hash(newPassword);
         updateData.password = hashedPassword;
       }
-
+      
       // Actualizar usuario en la base de datos
       const [updatedUser] = await db
         .update(users)
@@ -368,61 +368,35 @@ export function registerRoutes(app: Express): Server {
   // Get all receipts for the logged in user
   app.get("/api/receipts", ensureAuth, async (req, res) => {
     try {
-      let allReceipts;
+      let query = db
+        .select({
+          id: receipts.id,
+          userId: receipts.userId,
+          username: users.username,
+          receiptId: receipts.receiptId,
+          date: receipts.date,
+          total: receipts.total,
+          vendor: receipts.vendor,
+          categoryId: receipts.categoryId,
+          category: categories.name,
+          taxAmount: receipts.taxAmount,
+          rawText: receipts.rawText,
+          imageUrl: receipts.imageUrl,
+          createdAt: receipts.createdAt,
+          updatedAt: receipts.updatedAt,
+          companyName: companies.name,
+        })
+        .from(receipts)
+        .leftJoin(companies, eq(receipts.companyId, companies.id))
+        .leftJoin(categories, eq(receipts.categoryId, categories.id))
+        .leftJoin(users, eq(receipts.userId, users.id));
 
-      if (req.user?.role === UserRole.ADMINISTRADOR) {
-        // Si es admin, obtener todas las boletas
-        allReceipts = await db
-          .select({
-            id: receipts.id,
-            userId: receipts.userId,
-            username: users.username,
-            receiptId: receipts.receiptId,
-            date: receipts.date,
-            total: receipts.total,
-            vendor: receipts.vendor,
-            categoryId: receipts.categoryId,
-            category: categories.name,
-            taxAmount: receipts.taxAmount,
-            rawText: receipts.rawText,
-            imageUrl: receipts.imageUrl,
-            createdAt: receipts.createdAt,
-            updatedAt: receipts.updatedAt,
-            companyName: companies.name,
-          })
-          .from(receipts)
-          .leftJoin(companies, eq(receipts.companyId, companies.id))
-          .leftJoin(categories, eq(receipts.categoryId, categories.id))
-          .leftJoin(users, eq(receipts.userId, users.id))
-          .orderBy(desc(receipts.createdAt));
-      } else {
-        // Si no es admin, filtrar solo las boletas del usuario
-        allReceipts = await db
-          .select({
-            id: receipts.id,
-            userId: receipts.userId,
-            username: users.username,
-            receiptId: receipts.receiptId,
-            date: receipts.date,
-            total: receipts.total,
-            vendor: receipts.vendor,
-            categoryId: receipts.categoryId,
-            category: categories.name,
-            taxAmount: receipts.taxAmount,
-            rawText: receipts.rawText,
-            imageUrl: receipts.imageUrl,
-            createdAt: receipts.createdAt,
-            updatedAt: receipts.updatedAt,
-            companyName: companies.name,
-          })
-          .from(receipts)
-          .leftJoin(companies, eq(receipts.companyId, companies.id))
-          .leftJoin(categories, eq(receipts.categoryId, categories.id))
-          .leftJoin(users, eq(receipts.userId, users.id))
-          .where(eq(receipts.userId, req.user!.id))
-          .orderBy(desc(receipts.createdAt));
+      // Si no es admin, filtrar solo las boletas del usuario
+      if (req.user?.role !== UserRole.ADMINISTRADOR) {
+        query = query.where(eq(receipts.userId, req.user!.id));
       }
 
+      const allReceipts = await query.orderBy(desc(receipts.date));
       res.json(allReceipts);
     } catch (error) {
       console.error("Error al obtener las boletas:", error);
@@ -433,35 +407,34 @@ export function registerRoutes(app: Express): Server {
   // Nueva ruta para solo procesar imágenes sin guardar (para preview)
   app.post("/api/receipts/process", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "No se proporcionó ningún archivo" 
-        });
+      let extractedData = null;
+
+      if (req.file) {
+        const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+        
+        console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
+        const analysisResult = await analyzeReceiptImage(filePath);
+        console.log("Resultado del análisis OpenAI:", analysisResult);
+        
+        if (analysisResult.success) {
+          extractedData = analysisResult.extractedData;
+          
+          // Devolver solo los datos extraídos sin guardar en la base de datos
+          res.json({
+            success: true,
+            extractedData: extractedData,
+            imageUrl: `/uploads/receipts/${req.file.filename}`
+          });
+          return;
+        }
       }
 
-      const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-
-      console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
-      const analysisResult = await analyzeReceiptImage(filePath);
-      console.log("Resultado del análisis OpenAI:", analysisResult);
-
-      if (analysisResult.success && analysisResult.extractedData) {
-        // Devolver solo los datos extraídos sin guardar en la base de datos
-        res.json({
-          success: true,
-          extractedData: analysisResult.extractedData,
-          imageUrl: `/uploads/receipts/${req.file.filename}`
-        });
-      } else {
-        // Si OpenAI falla, devolver error
-        res.status(422).json({ 
-          success: false, 
-          error: "No se pudo extraer información de la imagen",
-          details: analysisResult.message || "Error desconocido"
-        });
-      }
-
+      // Si OpenAI falla o no hay archivo, devolver error
+      res.status(400).json({ 
+        success: false, 
+        error: "No se pudo procesar la imagen" 
+      });
+      
     } catch (error) {
       console.error("Error al procesar la imagen:", error);
       res.status(500).json({ 
@@ -471,42 +444,51 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Nuevo endpoint simple para guardar boletas con todos los datos
-  app.post("/api/receipts/save", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
+  // Nueva ruta para subir boletas con imágenes (incluyendo análisis con OpenAI)
+  app.post("/api/receipts", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
     try {
+      const date = new Date();
       let imageUrl = null;
+      let extractedData = null;
 
-      // Si hay un archivo, guardarlo
-      if (req.file) {
-        imageUrl = `/uploads/receipts/${req.file.filename}`;
+      // Verificar si es una solicitud JSON (datos ya procesados) o FormData (nueva imagen)
+      const isJsonRequest = req.headers['content-type']?.includes('application/json');
+
+      if (isJsonRequest) {
+        // Datos ya procesados - usar la URL de imagen existente
+        imageUrl = req.body.imageUrl;
+      } else {
+        // Nueva imagen - procesamiento de la imagen con OpenAI si hay un archivo subido
+        if (req.file) {
+          imageUrl = `/uploads/receipts/${req.file.filename}`;
+          const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
+          
+          console.log("Analizando imagen de boleta con OpenAI...");
+          const analysisResult = await analyzeReceiptImage(filePath);
+          console.log("Resultado del análisis OpenAI:", analysisResult);
+          
+          if (analysisResult.success) {
+            extractedData = analysisResult.extractedData;
+          }
+        } else if (req.body.imageUrl) {
+          // Si se proporciona una URL de imagen directamente
+          imageUrl = req.body.imageUrl;
+        }
       }
 
-      // Usar los datos del formulario
-      const receiptDate = new Date(req.body.date);
-      const receiptTotal = parseFloat(req.body.total);
-      const receiptVendor = req.body.vendor;
-      const receiptCategory = req.body.category;
-      const receiptDescription = req.body.description || "";
+      // Utilizar datos de OpenAI si están disponibles, de lo contrario usar los datos del formulario
+      const receiptDate = extractedData?.date || new Date(req.body.date);
+      const receiptTotal = extractedData?.total || parseFloat(req.body.total.toString());
+      const receiptVendor = extractedData?.vendor || req.body.vendor;
+      const receiptCategory = extractedData?.category || req.body.category;
+      const receiptDescription = extractedData?.description || req.body.description || "";
       
       // Obtener el categoryId basado en el nombre de la categoría
-      let categoryId = await db
+      const categoryId = await db
         .select({ id: categories.id })
         .from(categories)
         .where(eq(categories.name, receiptCategory))
         .then(rows => rows[0]?.id);
-
-      // Si no existe la categoría, crear una nueva
-      if (!categoryId) {
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: receiptCategory,
-            description: `Categoría creada automáticamente`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        categoryId = newCategory.id;
-      }
 
       // Obtener el último receiptId
       const lastReceipt = await db
@@ -522,9 +504,9 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         userId: req.user!.id,
         date: receiptDate,
-        total: receiptTotal.toString(),
+        total: receiptTotal,
         vendor: receiptVendor,
-        taxAmount: req.body.taxAmount ? req.body.taxAmount.toString() : Math.round(receiptTotal * 0.19).toString(),
+        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : Math.round(receiptTotal * 0.19),
         receiptId: nextId,
         categoryId,
         companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
@@ -537,10 +519,13 @@ export function registerRoutes(app: Express): Server {
         .values(receiptData)
         .returning();
 
-      res.json(newReceipt);
+      res.json({
+        ...newReceipt,
+        aiExtracted: extractedData ? true : false
+      });
     } catch (error) {
-      console.error("Error al guardar la boleta:", error);
-      res.status(500).json({ error: "Error al guardar la boleta" });
+      console.error("Error al agregar la boleta:", error);
+      res.status(500).json({ error: "Error al agregar la boleta" });
     }
   });
 
@@ -653,47 +638,92 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ success: false, error: "Error al eliminar la boleta" });
     }
   });
-
+  
   // Ruta para subir y procesar PDFs de boletas con OpenAI
   app.post("/api/receipts/pdf", ensureAuth, uploadReceiptPdf.single('pdf'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "No se ha subido ningún archivo PDF" 
-        });
+        return res.status(400).json({ error: "No se ha subido ningún archivo PDF" });
       }
-
+      
       // Ruta al archivo PDF subido
       const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
       const imageUrl = `/uploads/receipts/${req.file.filename}`;
-
-      console.log("Analizando PDF de boleta con OpenAI (solo procesamiento)...");
+      
+      console.log("Analizando PDF de boleta con OpenAI...");
       const analysisResult = await analyzeReceiptImage(pdfPath);
       console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
-
+      
       // Si el análisis con OpenAI falló, devolver error
-      if (!analysisResult.success || !analysisResult.extractedData) {
+      if (!analysisResult.success) {
         return res.status(422).json({
-          success: false,
           error: "No se pudo extraer información del PDF",
-          details: analysisResult.message || "Error desconocido"
+          details: analysisResult.message
         });
       }
-
-      // Devolver solo los datos extraídos sin guardar en la base de datos
+      
+      const extractedData = analysisResult.extractedData;
+      
+      // Obtener el categoryId basado en el nombre de la categoría
+      const categoryId = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.name, extractedData.category))
+        .then(rows => rows[0]?.id);
+        
+      // Si no existe la categoría, crear una nueva
+      let finalCategoryId = categoryId;
+      if (!finalCategoryId) {
+        const [newCategory] = await db
+          .insert(categories)
+          .values({
+            name: extractedData.category,
+            description: `Categoría creada automáticamente para boleta de ${extractedData.vendor}`,
+            createdBy: req.user!.id
+          })
+          .returning();
+        finalCategoryId = newCategory.id;
+      }
+      
+      // Obtener el último receiptId
+      const lastReceipt = await db
+        .select({ receiptId: receipts.receiptId })
+        .from(receipts)
+        .orderBy(desc(receipts.id))
+        .limit(1);
+        
+      const nextId = lastReceipt.length > 0
+        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
+        : "1";
+        
+      // Crear la boleta con la información extraída
+      const receiptData = {
+        userId: req.user!.id,
+        date: extractedData.date,
+        total: extractedData.total,
+        vendor: extractedData.vendor,
+        taxAmount: Math.round(extractedData.total * 0.19), // Estimación de IVA
+        receiptId: nextId,
+        categoryId: finalCategoryId,
+        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
+        rawText: extractedData.description || "Boleta PDF procesada con IA",
+        imageUrl
+      };
+      
+      const [newReceipt] = await db
+        .insert(receipts)
+        .values(receiptData)
+        .returning();
+        
       res.json({
-        success: true,
-        extractedData: analysisResult.extractedData,
-        imageUrl: imageUrl
+        ...newReceipt,
+        aiExtracted: true,
+        extractedData
       });
-
+      
     } catch (error) {
       console.error("Error al procesar PDF de boleta:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Error al procesar PDF de boleta" 
-      });
+      res.status(500).json({ error: "Error al procesar PDF de boleta" });
     }
   });
 
@@ -792,55 +822,55 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/user-messages/:userId", ensureAuth, async (req, res) => {
     try {
       const { userId } = req.params;
-
+      
       // El administrador puede ver cualquier mensaje, pero los usuarios regulares solo los suyos
       if (req.user?.role !== UserRole.ADMINISTRADOR && req.user?.id !== parseInt(userId)) {
         return res.status(403).json({ error: "No tienes permiso para ver este mensaje" });
       }
-
+      
       const messages = await db
         .select()
         .from(userMessages)
         .where(eq(userMessages.userId, parseInt(userId)))
         .orderBy(desc(userMessages.createdAt));
-
+      
       // Retornar el mensaje activo más reciente
       const activeMessage = messages.find(msg => msg.isActive);
-
+      
       res.json(activeMessage || null);
     } catch (error) {
       console.error("Error al obtener mensaje de usuario:", error);
       res.status(500).json({ error: "Error al obtener mensaje de usuario" });
     }
   });
-
+  
   // Crear o actualizar mensaje para un usuario (solo administrador)
   app.post("/api/user-messages/:userId", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { message } = req.body;
-
+      
       if (!userId || !message) {
         return res.status(400).json({ error: "El ID de usuario y el mensaje son requeridos" });
       }
-
+      
       // Validar que el usuario existe
       const [userExists] = await db
         .select()
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-
+        
       if (!userExists) {
         return res.status(404).json({ error: "Usuario no encontrado" });
       }
-
+      
       // Desactivar mensajes anteriores
       await db
         .update(userMessages)
         .set({ isActive: false })
         .where(eq(userMessages.userId, userId));
-
+      
       // Crear nuevo mensaje
       const [newMessage] = await db
         .insert(userMessages)
@@ -852,24 +882,24 @@ export function registerRoutes(app: Express): Server {
           updatedAt: new Date()
         })
         .returning();
-
+      
       res.json(newMessage);
     } catch (error) {
       console.error("Error al crear mensaje de usuario:", error);
       res.status(500).json({ error: "Error al crear mensaje de usuario" });
     }
   });
-
+  
   // Actualizar estado de un mensaje (activar/desactivar)
   app.patch("/api/user-messages/:userId/:id/status", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { isActive } = req.body;
-
+      
       if (isActive === undefined) {
         return res.status(400).json({ error: "El estado del mensaje es requerido" });
       }
-
+      
       const [updatedMessage] = await db
         .update(userMessages)
         .set({ 
@@ -878,18 +908,18 @@ export function registerRoutes(app: Express): Server {
         })
         .where(eq(userMessages.id, parseInt(id)))
         .returning();
-
+        
       if (!updatedMessage) {
         return res.status(404).json({ error: "Mensaje no encontrado" });
       }
-
+      
       res.json(updatedMessage);
     } catch (error) {
       console.error("Error al actualizar mensaje:", error);
       res.status(500).json({ error: "Error al actualizar mensaje" });
     }
   });
-
+  
   // Actualizar contenido de un mensaje - endpoint simplificado
   app.put("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
@@ -897,16 +927,16 @@ export function registerRoutes(app: Express): Server {
       console.log("PUT /api/user-messages/:userId/:id - Request body:", req.body);
       console.log("PUT /api/user-messages/:userId/:id - Request body type:", typeof req.body);
       console.log("PUT /api/user-messages/:userId/:id - Request headers:", req.headers);
-
+      
       // Obtener los parámetros de la URL
       const id = parseInt(req.params.id);
       const userId = parseInt(req.params.userId);
-
+      
       // Verificar si el cuerpo de la solicitud es válido
       if (!req.body) {
         return res.status(400).json({ error: "No se recibió el contenido de la solicitud" });
       }
-
+      
       // Extraer el mensaje del cuerpo, con varias alternativas para flexibilidad
       let messageContent = null;
       if (typeof req.body === 'string') {
@@ -924,14 +954,14 @@ export function registerRoutes(app: Express): Server {
           messageContent = req.body[keys[0]];
         }
       }
-
+      
       console.log("PUT /api/user-messages - Extracted message:", messageContent);
-
+      
       // Validar que tengamos un mensaje
       if (!messageContent || (typeof messageContent === 'string' && !messageContent.trim())) {
         return res.status(400).json({ error: "El mensaje no puede estar vacío" });
       }
-
+      
       const [updatedMessage] = await db
         .update(userMessages)
         .set({ 
@@ -943,147 +973,38 @@ export function registerRoutes(app: Express): Server {
           eq(userMessages.userId, userId)
         ))
         .returning();
-
+        
       if (!updatedMessage) {
         return res.status(404).json({ error: "Mensaje no encontrado" });
       }
-
+      
       res.json(updatedMessage);
     } catch (error) {
       console.error("Error al actualizar contenido del mensaje:", error);
       res.status(500).json({ error: "Error al actualizar contenido del mensaje" });
     }
   });
-
+  
   // Eliminar mensaje
   app.delete("/api/user-messages/:userId/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = parseInt(req.params.userId);
-
+      
       await db
         .delete(userMessages)
         .where(and(
           eq(userMessages.id, id),
           eq(userMessages.userId, userId)
         ));
-
+        
       res.json({ message: "Mensaje eliminado correctamente" });
     } catch (error) {
       console.error("Error al eliminar mensaje:", error);
       res.status(500).json({ error: "Error al eliminar mensaje" });
     }
   });
-
-
-
-  // NUEVO SISTEMA DE BOLETAS - SOLO ANÁLISIS (SIN GUARDAR)
-  app.post("/api/receipts/analyze", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No se proporcionó archivo" });
-      }
-
-      // Solo analizar y extraer datos, NO guardar en BD
-      const filePath = req.file.path;
-      const analysisResult = await analyzeReceiptImage(filePath);
-      
-      res.json(analysisResult);
-    } catch (error) {
-      console.error("Error al analizar imagen:", error);
-      res.status(500).json({ error: "Error al analizar la imagen" });
-    }
-  });
-
-  // NUEVO SISTEMA DE BOLETAS - SOLO GUARDAR (UNA SOLA VEZ)
-  app.post("/api/receipts/create", ensureAuth, uploadReceipt.single('image'), async (req, res) => {
-    try {
-      let imageUrl = null;
-      
-      // Guardar archivo si existe
-      if (req.file) {
-        imageUrl = `/uploads/receipts/${req.file.filename}`;
-      }
-
-      const {
-        date,
-        total,
-        vendor,
-        category,
-        description,
-        companyId,
-        taxAmount
-      } = req.body;
-
-      // Validaciones estrictas
-      if (!date || !total || !companyId || !category || !description) {
-        return res.status(400).json({ 
-          error: "Todos los campos marcados como obligatorios son requeridos" 
-        });
-      }
-
-      // Obtener categoryId
-      let categoryRecord = await db
-        .select()
-        .from(categories)
-        .where(eq(categories.name, category))
-        .limit(1);
-
-      let categoryId: number;
-      if (categoryRecord.length === 0) {
-        // Crear categoría si no existe
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: category,
-            description: `Categoría: ${category}`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        categoryId = newCategory.id;
-      } else {
-        categoryId = categoryRecord[0].id;
-      }
-
-      // Generar receiptId único
-      const lastReceipt = await db
-        .select({ receiptId: receipts.receiptId })
-        .from(receipts)
-        .orderBy(desc(receipts.id))
-        .limit(1);
-
-      const nextReceiptId = lastReceipt.length > 0 
-        ? (parseInt(lastReceipt[0].receiptId) + 1).toString()
-        : "1";
-
-      // Insertar boleta UNA SOLA VEZ
-      const [newReceipt] = await db
-        .insert(receipts)
-        .values({
-          userId: req.user!.id,
-          companyId: parseInt(companyId),
-          categoryId,
-          receiptId: nextReceiptId,
-          date: new Date(date),
-          total: parseFloat(total).toString(),
-          vendor: vendor || '',
-          taxAmount: taxAmount ? parseFloat(taxAmount).toString() : Math.round(parseFloat(total) * 0.19).toString(),
-          rawText: description,
-          imageUrl
-        })
-        .returning();
-
-      res.json({
-        success: true,
-        receipt: newReceipt
-      });
-
-    } catch (error) {
-      console.error("Error al crear boleta:", error);
-      res.status(500).json({ error: "Error al crear la boleta" });
-    }
-  });
-
+  
   const httpServer = createServer(app);
   return httpServer;
 }

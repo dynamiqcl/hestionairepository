@@ -47,6 +47,30 @@ export function registerRoutes(app: Express): Server {
   }
   app.use("/uploads", express.static(uploadsPath));
 
+  // Ruta específica para verificar y servir documentos de manera segura
+  app.get("/uploads/documents/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsPath, "documents", filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ error: "Archivo no encontrado" });
+    }
+  });
+
+  // Ruta específica para verificar y servir recibos de manera segura
+  app.get("/uploads/receipts/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsPath, "receipts", filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ error: "Archivo no encontrado" });
+    }
+  });
+
   // Setup authentication routes
   setupAuth(app);
 
@@ -345,7 +369,7 @@ export function registerRoutes(app: Express): Server {
           res.json({
             success: true,
             extractedData: extractedData,
-            imageUrl: `/uploads/receipts/${req.file.filename}`
+            imageUrl: storageService.getPublicUrl(req.file.filename, 'receipts')
           });
           return;
         }
@@ -382,7 +406,7 @@ export function registerRoutes(app: Express): Server {
       } else {
         // Nueva imagen - procesamiento de la imagen con OpenAI si hay un archivo subido
         if (req.file) {
-          imageUrl = `/uploads/receipts/${req.file.filename}`;
+          imageUrl = storageService.getPublicUrl(req.file.filename, 'receipts');
           const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
           
           console.log("Analizando imagen de boleta con OpenAI...");
@@ -570,7 +594,7 @@ export function registerRoutes(app: Express): Server {
       
       // Ruta al archivo PDF subido
       const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
-      const imageUrl = `/uploads/receipts/${req.file.filename}`;
+      const imageUrl = storageService.getPublicUrl(req.file.filename, 'receipts');
       
       console.log("Analizando PDF de boleta con OpenAI...");
       const analysisResult = await analyzeReceiptImage(pdfPath);
@@ -686,7 +710,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { name, description, targetUsers, category } = req.body;
-      const fileUrl = `/uploads/documents/${req.file.filename}`;
+      const fileUrl = storageService.getPublicUrl(req.file.filename, 'documents');
 
       const [newDocument] = await db
         .insert(documents)

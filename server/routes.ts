@@ -194,7 +194,7 @@ export function registerRoutes(app: Express): Server {
       // Preparar los datos a actualizar
       const updateData = {
         ...userData,
-        updatedAt: new Date(),
+        updatedAt: sql`NOW()`,
       };
       
       // Si se proporciona una nueva contraseña, la hasheamos

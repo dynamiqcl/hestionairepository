@@ -92,7 +92,7 @@ export default function TablesViewer() {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [variables.type] });
+      queryClient.invalidateQueries({ queryKey: [`/api/${variables.type}`] });
       toast({ title: "Actualización exitosa" });
       setEditingItem(null);
     },

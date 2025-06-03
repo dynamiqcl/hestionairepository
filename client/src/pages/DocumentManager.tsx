@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,8 @@ export default function DocumentManager() {
         description: "Documento subido correctamente",
       });
       setIsUploading(false);
+      // Invalidar caché para actualizar la lista de documentos
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
     },
     onError: (error: Error) => {
       toast({
@@ -142,6 +145,8 @@ export default function DocumentManager() {
         title: "Éxito",
         description: "Documento eliminado correctamente",
       });
+      // Invalidar caché para actualizar la lista de documentos
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
     },
   });
 

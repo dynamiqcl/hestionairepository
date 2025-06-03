@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { receipts, companies, users, UserRole, categories, documents, userMessages } from "@db/schema";
@@ -16,7 +16,7 @@ import { uploadReceipt, uploadDocument, storageService } from "./storage";
 // El nuevo sistema de almacenamiento se importa desde storage.ts
 
 // Middleware to ensure user is authenticated
-const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+const ensureAuth = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
     return next();
   }
@@ -24,16 +24,16 @@ const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.N
 };
 
 // Middleware para verificar rol de administrador
-const ensureAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+const ensureAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user?.role !== UserRole.ADMINISTRADOR) {
     return res.status(403).send("Acceso no autorizado");
   }
   next();
 };
 
-// Middleware para verificar rol de consultor o superior
-const ensureConsultorOrAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-  if (req.user?.role !== UserRole.CONSULTOR && req.user?.role !== UserRole.ADMINISTRADOR) {
+// Middleware para verificar rol de empleado o superior
+const ensureEmpleadoOrAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role !== UserRole.EMPLEADO && req.user?.role !== UserRole.ADMINISTRADOR) {
     return res.status(403).send("Acceso no autorizado");
   }
   next();
@@ -426,9 +426,9 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         userId: req.user!.id,
         date: receiptDate,
-        total: receiptTotal,
+        total: receiptTotal.toString(),
         vendor: receiptVendor,
-        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()) : Math.round(receiptTotal * 0.19),
+        taxAmount: req.body.taxAmount ? parseFloat(req.body.taxAmount.toString()).toString() : Math.round(receiptTotal * 0.19).toString(),
         receiptId: nextId,
         categoryId,
         companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
@@ -438,7 +438,7 @@ export function registerRoutes(app: Express): Server {
 
       const [newReceipt] = await db
         .insert(receipts)
-        .values(receiptData)
+        .values([receiptData])
         .returning();
 
       res.json({
@@ -634,7 +634,7 @@ export function registerRoutes(app: Express): Server {
       
       const [newReceipt] = await db
         .insert(receipts)
-        .values(receiptData)
+        .values([receiptData])
         .returning();
         
       res.json({

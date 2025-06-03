@@ -605,7 +605,7 @@ export default function Dashboard() {
                   {documents?.filter(doc => 
                     doc.targetUsers.includes(user?.id) && 
                     (!selectedDocCategory || doc.category === selectedDocCategory || (selectedDocCategory === "Documentos Generales" && !doc.category))
-                  )?.map((doc) => (
+                  )?.slice(0, 5)?.map((doc) => (
                     <tr key={doc.id} className="border-b">
                       <td className="p-4">{doc.name}</td>
                       <td className="p-4">{doc.description}</td>

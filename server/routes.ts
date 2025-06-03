@@ -926,6 +926,32 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Error al eliminar mensaje" });
     }
   });
+
+  // Eliminar usuario por email (solo admin)
+  app.delete("/api/users/by-email/:email", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const { email } = req.params;
+      
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, email))
+        .limit(1);
+
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      await db
+        .delete(users)
+        .where(eq(users.username, email));
+
+      res.json({ message: `Usuario ${email} eliminado correctamente` });
+    } catch (error) {
+      console.error("Error al eliminar usuario:", error);
+      res.status(500).json({ error: "Error al eliminar usuario" });
+    }
+  });
   
   const httpServer = createServer(app);
   return httpServer;

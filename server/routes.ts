@@ -622,9 +622,9 @@ export function registerRoutes(app: Express): Server {
       const receiptData = {
         userId: req.user!.id,
         date: extractedData.date,
-        total: extractedData.total,
+        total: extractedData.total.toString(),
         vendor: extractedData.vendor,
-        taxAmount: Math.round(extractedData.total * 0.19), // Estimación de IVA
+        taxAmount: Math.round(extractedData.total * 0.19).toString(), // Estimación de IVA
         receiptId: nextId,
         categoryId: finalCategoryId,
         companyId: req.body.companyId ? parseInt(req.body.companyId) : null,

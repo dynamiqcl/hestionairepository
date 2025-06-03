@@ -11,28 +11,9 @@ import express from "express";
 import { randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 import { analyzeReceiptImage } from "./openai";
+import { uploadReceipt, uploadDocument, storageService } from "./storage";
 
-// Configuración de multer para almacenar las imágenes de las boletas
-const receiptStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(process.cwd(), "uploads", "receipts");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const uploadReceipt = multer({
-  storage: receiptStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  }
-});
+// El nuevo sistema de almacenamiento se importa desde storage.ts
 
 // Middleware to ensure user is authenticated
 const ensureAuth = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -57,65 +38,6 @@ const ensureConsultorOrAdmin = (req: Express.Request, res: Express.Response, nex
   }
   next();
 };
-
-// Configuración de multer para almacenar archivos
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Asegurarse de que el directorio uploads existe
-    const uploadDir = path.join(process.cwd(), "uploads");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
-      cb(null, true);
-    } else {
-      cb(new Error("Solo se permiten archivos PDF"));
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
-});
-
-// Configuración para almacenar PDFs de boletas
-const receiptPdfStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(process.cwd(), "uploads", "receipts");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    cb(null, "receipt-pdf-" + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const uploadReceiptPdf = multer({
-  storage: receiptPdfStorage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
-      cb(null, true);
-    } else {
-      cb(new Error("Solo se permiten archivos PDF"));
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  }
-});
 
 export function registerRoutes(app: Express): Server {
   // Servir archivos estáticos
@@ -640,7 +562,7 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Ruta para subir y procesar PDFs de boletas con OpenAI
-  app.post("/api/receipts/pdf", ensureAuth, uploadReceiptPdf.single('pdf'), async (req, res) => {
+  app.post("/api/receipts/pdf", ensureAuth, uploadReceipt.single('pdf'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No se ha subido ningún archivo PDF" });
@@ -757,7 +679,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/documents", ensureAuth, ensureAdmin, upload.single("file"), async (req, res) => {
+  app.post("/api/documents", ensureAuth, ensureAdmin, uploadDocument.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });

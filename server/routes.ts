@@ -189,12 +189,20 @@ export function registerRoutes(app: Express): Server {
   app.put("/api/users/:id", ensureAuth, ensureAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { newPassword, ...userData } = req.body;
+      const { newPassword, createdAt, updatedAt, fechaRegistro, ...userData } = req.body;
+      
+      // Filtrar campos que no deben ser actualizados directamente
+      const cleanUserData = Object.fromEntries(
+        Object.entries(userData).filter(([key, value]) => {
+          // Excluir campos de timestamp y campos undefined/null
+          return !['createdAt', 'updatedAt', 'fechaRegistro'].includes(key) && 
+                 value !== undefined && value !== null && value !== '';
+        })
+      );
       
       // Preparar los datos a actualizar
       const updateData = {
-        ...userData,
-        updatedAt: sql`NOW()`,
+        ...cleanUserData,
       };
       
       // Si se proporciona una nueva contraseña, la hasheamos
@@ -202,6 +210,8 @@ export function registerRoutes(app: Express): Server {
         const hashedPassword = await crypto.hash(newPassword);
         updateData.password = hashedPassword;
       }
+      
+      console.log('Datos a actualizar:', updateData);
       
       // Actualizar usuario en la base de datos
       const [updatedUser] = await db

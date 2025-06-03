@@ -686,7 +686,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { name, description, targetUsers, category } = req.body;
-      const fileUrl = `/uploads/${req.file.filename}`;
+      const fileUrl = `/uploads/documents/${req.file.filename}`;
 
       const [newDocument] = await db
         .insert(documents)

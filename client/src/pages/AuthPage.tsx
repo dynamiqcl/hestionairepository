@@ -71,7 +71,7 @@ export default function AuthPage() {
         <Card className="w-full max-w-md shadow-lg border-0">
           <CardHeader className="space-y-2 text-center">
             <div className="flex justify-center mb-4">
-              <img src="/api/storage/hestion-logo.png" alt="Hestion Logo" className="h-12" />
+              <img src="/api/storage/hestion-logo-secondary.png" alt="Hestion Logo" className="h-16 w-auto" />
             </div>
             <CardTitle className="text-2xl font-bold">¡Bienvenido a Hestion! 👋</CardTitle>
             <p className="text-muted-foreground">

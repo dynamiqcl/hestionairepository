@@ -418,64 +418,26 @@ export default function ReceiptsManager() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
-                              <DialogHeader className="pb-4">
-                                <DialogTitle className="text-lg sm:text-xl">Boleta {receipt.receiptId}</DialogTitle>
-                                <DialogDescription className="text-sm">
-                                  {receipt.description || 'Sin descripción'}
-                                </DialogDescription>
+                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-2">
+                              <DialogHeader className="pb-2">
+                                <DialogTitle className="text-lg">Boleta {receipt.receiptId}</DialogTitle>
                               </DialogHeader>
                               
-                              <div className="flex flex-col lg:flex-row gap-4 h-[calc(85vh-120px)] overflow-hidden">
-                                {/* Imagen */}
-                                <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg overflow-auto p-4">
-                                  <img
-                                    src={receipt.imageUrl || ''}
-                                    alt={`Boleta ${receipt.receiptId}`}
-                                    className="max-w-full max-h-full object-contain"
-                                    style={{
-                                      maxHeight: 'calc(85vh - 200px)',
-                                      width: 'auto',
-                                      height: 'auto'
-                                    }}
-                                    onError={(e) => {
-                                      console.error('Error loading image:', receipt.imageUrl);
-                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
-                                    }}
-                                  />
-                                </div>
-                                
-                                {/* Información de la boleta */}
-                                <div className="w-full lg:w-80 lg:flex-shrink-0 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                                  <div className="space-y-3">
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700">Fecha:</p>
-                                      <p className="text-sm">{new Date(receipt.date).toLocaleDateString('es-ES')}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700">Empresa:</p>
-                                      <p className="text-sm">{receipt.companyName || 'Sin empresa'}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700">Proveedor:</p>
-                                      <p className="text-sm">{receipt.vendor || 'Sin proveedor'}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700">Categoría:</p>
-                                      <p className="text-sm">{receipt.category || 'Sin categoría'}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700">Monto:</p>
-                                      <p className="text-lg font-semibold text-green-600">{formatCLP(Number(receipt.total))}</p>
-                                    </div>
-                                    {receipt.description && (
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700">Descripción:</p>
-                                        <p className="text-sm text-gray-600">{receipt.description}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                              <div className="flex items-center justify-center w-full h-[calc(90vh-100px)] bg-gray-50 rounded-lg overflow-auto">
+                                <img
+                                  src={receipt.imageUrl || ''}
+                                  alt={`Boleta ${receipt.receiptId}`}
+                                  className="max-w-full max-h-full object-contain"
+                                  style={{
+                                    maxHeight: 'calc(90vh - 120px)',
+                                    width: 'auto',
+                                    height: 'auto'
+                                  }}
+                                  onError={(e) => {
+                                    console.error('Error loading image:', receipt.imageUrl);
+                                    e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                  }}
+                                />
                               </div>
                             </DialogContent>
                           </Dialog>

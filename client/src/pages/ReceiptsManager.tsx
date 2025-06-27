@@ -418,45 +418,62 @@ export default function ReceiptsManager() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-4xl">
+                            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
                               <DialogHeader>
                                 <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
                                 <DialogDescription>
                                   {receipt.description || 'Sin descripción'}
                                 </DialogDescription>
                               </DialogHeader>
-                              <div className="relative w-full aspect-[3/4]">
-                                <img
-                                  src={receipt.imageUrl || ''}
-                                  alt={`Boleta ${receipt.receiptId}`}
-                                  className="object-contain w-full h-full max-h-[80vh]"
-                                  style={{
-                                    maxWidth: '100%',
-                                    margin: '0 auto',
-                                    display: 'block'
-                                  }}
-                                  onError={(e) => {
-                                    console.error('Error loading image:', receipt.imageUrl);
-                                    e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
-                                  }}
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4 mt-4">
-                                <div>
-                                  <p className="text-sm font-medium">Fecha:</p>
-                                  <p className="text-sm">{new Date(receipt.date).toLocaleDateString('es-ES')}</p>
+                              <div className="flex flex-col lg:flex-row gap-4 max-h-[calc(90vh-120px)] overflow-hidden">
+                                {/* Imagen */}
+                                <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
+                                  <img
+                                    src={receipt.imageUrl || ''}
+                                    alt={`Boleta ${receipt.receiptId}`}
+                                    className="max-w-full max-h-full object-contain"
+                                    style={{
+                                      maxHeight: 'calc(90vh - 200px)',
+                                      width: 'auto',
+                                      height: 'auto'
+                                    }}
+                                    onError={(e) => {
+                                      console.error('Error loading image:', receipt.imageUrl);
+                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';
+                                    }}
+                                  />
                                 </div>
-                                <div>
-                                  <p className="text-sm font-medium">Proveedor:</p>
-                                  <p className="text-sm">{receipt.vendor || 'Sin proveedor'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Categoría:</p>
-                                  <p className="text-sm">{receipt.category || 'Sin categoría'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Monto:</p>
-                                  <p className="text-sm">{formatCLP(Number(receipt.total))}</p>
+                                
+                                {/* Información de la boleta */}
+                                <div className="lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto p-4 bg-gray-50 rounded-lg">
+                              <div className="space-y-3">
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Fecha:</p>
+                                      <p className="text-sm">{new Date(receipt.date).toLocaleDateString('es-ES')}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Empresa:</p>
+                                      <p className="text-sm">{receipt.companyName || 'Sin empresa'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Proveedor:</p>
+                                      <p className="text-sm">{receipt.vendor || 'Sin proveedor'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Categoría:</p>
+                                      <p className="text-sm">{receipt.category || 'Sin categoría'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Monto:</p>
+                                      <p className="text-lg font-semibold text-green-600">{formatCLP(Number(receipt.total))}</p>
+                                    </div>
+                                    {receipt.description && (
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700">Descripción:</p>
+                                        <p className="text-sm text-gray-600">{receipt.description}</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </DialogContent>

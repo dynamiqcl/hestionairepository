@@ -40,20 +40,22 @@ const ensureEmpleadoOrAdmin = (req: Request, res: Response, next: NextFunction) 
 };
 
 export function registerRoutes(app: Express): Server {
-  // Servir archivos estáticos
+  // Servir archivos estáticos ANTES del setup de auth
   const uploadsPath = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsPath)) {
     fs.mkdirSync(uploadsPath, { recursive: true });
   }
-  app.use("/uploads", express.static(uploadsPath));
   
-  // Ruta específica para archivos de storage (logos, etc.)
+  // Ruta específica para archivos de storage (logos, etc.) - DEBE IR ANTES DE setupAuth()
   app.get("/api/storage/:filename", (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(uploadsPath, filename);
     
+    console.log(`Requesting file: ${filename} from path: ${filePath}`);
+    
     // Verificar que el archivo existe
     if (!fs.existsSync(filePath)) {
+      console.log(`File not found: ${filePath}`);
       return res.status(404).send("Archivo no encontrado");
     }
     
@@ -77,10 +79,13 @@ export function registerRoutes(app: Express): Server {
         break;
     }
     
+    console.log(`Serving file with Content-Type: ${contentType}`);
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache por 1 año
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
     res.sendFile(filePath);
   });
+
+  app.use("/uploads", express.static(uploadsPath));
 
   // Ruta específica para verificar y servir documentos de manera segura
   app.get("/uploads/documents/:filename", (req, res) => {

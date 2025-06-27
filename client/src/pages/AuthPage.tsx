@@ -41,27 +41,26 @@ export default function AuthPage() {
       {/* Left side - Login form */}
       <div className="hidden lg:flex w-1/2 bg-primary items-center justify-center p-8">
         <div className="max-w-lg text-white">
-          <h1 className="text-4xl font-bold mb-4">Bienvenido a Hestion</h1>
+          <h1 className="text-4xl font-bold mb-4">Bienvenidos a Hestion App</h1>
           <p className="text-lg text-primary-foreground/90 mb-8">
-            Plataforma financiera inteligente para el mercado chileno, especializada en gestión documental
-            con robusto sistema de manejo de documentos y control de acceso administrativo.
+            En Hestión trabajamos cada día para mejorar tu gestión tributaria, asegurando que tu información esté siempre clara, disponible y al día. Esta plataforma ha sido diseñada para acompañarte en la rendición de gastos y la gestión documental de tu empresa, de forma simple, ordenada y eficiente.
           </p>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
               <i className='bx bx-check-circle text-xl'></i>
-              <span>Control de acceso</span>
+              <span>Rendir gastos fácilmente</span>
             </div>
             <div className="flex items-center gap-2">
               <i className='bx bx-check-circle text-xl'></i>
-              <span>Gestión documental</span>
+              <span>Organizar tu documentación</span>
             </div>
             <div className="flex items-center gap-2">
               <i className='bx bx-check-circle text-xl'></i>
-              <span>OCR avanzado</span>
+              <span>Visualizar reportes al instante</span>
             </div>
             <div className="flex items-center gap-2">
               <i className='bx bx-check-circle text-xl'></i>
-              <span>IA financiera</span>
+              <span>Cumplir con tus obligaciones tributarias</span>
             </div>
           </div>
         </div>

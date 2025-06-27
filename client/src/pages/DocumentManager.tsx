@@ -26,15 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, ArrowLeft, FileText, Download, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, FileText, Download } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -370,78 +362,6 @@ export default function DocumentManager() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" title="Ver documento">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
-                            <DialogHeader className="pb-4">
-                              <DialogTitle className="text-lg sm:text-xl">{doc.name}</DialogTitle>
-                              <DialogDescription className="text-sm">
-                                {doc.description || 'Sin descripción'}
-                              </DialogDescription>
-                            </DialogHeader>
-                            
-                            <div className="flex flex-col lg:flex-row gap-4 h-[calc(85vh-120px)] overflow-hidden">
-                              {/* Documento */}
-                              <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg overflow-auto p-4">
-                                {doc.fileUrl.toLowerCase().endsWith('.pdf') ? (
-                                  <iframe
-                                    src={doc.fileUrl}
-                                    className="w-full h-full border-0"
-                                    style={{
-                                      minHeight: 'calc(85vh - 200px)',
-                                    }}
-                                    title={doc.name}
-                                  />
-                                ) : (
-                                  <img
-                                    src={doc.fileUrl}
-                                    alt={doc.name}
-                                    className="max-w-full max-h-full object-contain"
-                                    style={{
-                                      maxHeight: 'calc(85vh - 200px)',
-                                      width: 'auto',
-                                      height: 'auto'
-                                    }}
-                                    onError={(e) => {
-                                      console.error('Error loading document:', doc.fileUrl);
-                                      e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+documento';
-                                    }}
-                                  />
-                                )}
-                              </div>
-                              
-                              {/* Información del documento */}
-                              <div className="w-full lg:w-80 lg:flex-shrink-0 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Nombre:</p>
-                                    <p className="text-sm">{doc.name}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Descripción:</p>
-                                    <p className="text-sm">{doc.description || 'Sin descripción'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Categoría:</p>
-                                    <p className="text-sm">{doc.category || 'Documentos Generales'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Fecha de creación:</p>
-                                    <p className="text-sm">{new Date(doc.createdAt).toLocaleDateString('es-ES')}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Tipo:</p>
-                                    <p className="text-sm">{doc.fileUrl.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Imagen'}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
                         <Button
                           variant="ghost"
                           size="icon"

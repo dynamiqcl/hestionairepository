@@ -53,7 +53,7 @@ export function UserMessage({ userId, className }: UserMessageProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center">
             <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-            Mensaje de Administración
+            Notificación
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -73,7 +73,7 @@ export function UserMessage({ userId, className }: UserMessageProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center">
           <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-          Mensaje de Administración
+          Notificación
         </CardTitle>
       </CardHeader>
       <CardContent>

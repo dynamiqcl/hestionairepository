@@ -31,7 +31,7 @@ export function Layout({ children }: LayoutProps) {
 
   const menuItems = [
     {
-      title: "Dashboard",
+      title: "Pantalla Principal",
       icon: <BarChart className="w-5 h-5" />,
       path: "/",
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
@@ -43,31 +43,31 @@ export function Layout({ children }: LayoutProps) {
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {
-      title: "Gestionar Boletas",
+      title: "Tus Boletas",
       icon: <FileText className="w-5 h-5" />,
       path: "/receipts",
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {
-      title: "Documentos",
+      title: "Tus Documentos",
       icon: <FileText className="w-5 h-5" />,
       path: "/documents",
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {
-      title: "Empresas",
+      title: "Getión de Empresas",
       icon: <Building2 className="w-5 h-5" />,
       path: "/companies",
       showFor: ["ADMINISTRADOR"],
     },
     {
-      title: "Usuarios",
+      title: "Gestión de Usuarios",
       icon: <Users className="w-5 h-5" />,
       path: "/tables",
       showFor: ["ADMINISTRADOR"],
     },
     {
-      title: "Mensajes",
+      title: "Gestión de Mensajes",
       icon: <MessageSquare className="w-5 h-5" />,
       path: "/user-messages",
       showFor: ["ADMINISTRADOR"],

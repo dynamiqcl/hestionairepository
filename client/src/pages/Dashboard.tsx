@@ -183,7 +183,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div className="flex items-center w-full justify-between md:w-auto">
           <div>
-            <h1 className="text-2xl md:text-4xl font-bold">Panel de Rendiciones</h1>
+            <h1 className="text-2xl md:text-4xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Bienvenido, {user?.nombreCompleto || user?.username}</p>
           </div>
           <Button
@@ -307,7 +307,7 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Gastos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Gastos Rendidos</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -316,7 +316,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gastos Año Anterior</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Gastos Rendidos Año Anterior</CardTitle>
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -330,7 +330,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Boletas Procesadas</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Boletas Subidas</CardTitle>
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -342,7 +342,7 @@ export default function Dashboard() {
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Distribución por Categorías</CardTitle>
+          <CardTitle>Distribución de Gastos por Categorías</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="w-full h-[400px] flex justify-center items-center">
@@ -384,7 +384,7 @@ export default function Dashboard() {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <div>
-            <CardTitle>Boletas Recientes</CardTitle>
+            <CardTitle>Ultimas Boletas Rendidas</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Mostrando las 5 boletas más recientes</p>
           </div>
           <Link href="/receipts">
@@ -558,7 +558,7 @@ export default function Dashboard() {
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Documentos Asignados</CardTitle>
+          <CardTitle>Últimos Documentos Cargados</CardTitle>
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
               variant="outline"

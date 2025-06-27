@@ -13,8 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UserRole } from "@db/schema";
 
-import { Navbar } from "@/components/ui/navbar";
-
 export default function TablesViewer() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
@@ -166,9 +164,7 @@ export default function TablesViewer() {
   }
 
   return (
-    <div>
-      <Navbar />
-      <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4">
         <Card>
           <CardHeader>
             <CardTitle>Mantenedor de Tablas</CardTitle>
@@ -706,7 +702,6 @@ export default function TablesViewer() {
             </Tabs>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

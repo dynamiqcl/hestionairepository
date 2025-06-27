@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -107,16 +106,14 @@ export default function CompanyManager() {
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="container mx-auto p-4 space-y-6 mt-20">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold">Gestión de Empresas</h1>
-          </div>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">Gestión de Empresas</h1>
+        </div>
           <Button onClick={() => setIsCreating(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Empresa
@@ -316,7 +313,6 @@ export default function CompanyManager() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </>
+    </div>
   );
 }

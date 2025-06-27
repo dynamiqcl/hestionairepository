@@ -1,0 +1,18 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Hexagon background -->
+  <polygon points="15,30 25,15 40,15 50,30 40,45 25,45" fill="url(#gradient)" />
+  
+  <!-- Letter H in hexagon -->
+  <path d="M30 22 L30 38 M35 22 L35 38 M30 30 L35 30" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Company name -->
+  <text x="60" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1F2937">Hestion</text>
+  <text x="60" y="40" font-family="Arial, sans-serif" font-size="10" fill="#6B7280">Gestión Inteligente</text>
+</svg>

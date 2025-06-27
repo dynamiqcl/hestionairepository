@@ -14,7 +14,6 @@ import {
   X,
   LogOut,
   Building2,
-  Bell,
   MessageSquare
 } from "lucide-react";
 import 'boxicons/css/boxicons.min.css';
@@ -127,9 +126,6 @@ export function Layout({ children }: LayoutProps) {
           </Button>
 
           <div className="ml-auto flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.nombreCompleto || user?.username}`} />

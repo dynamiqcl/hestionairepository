@@ -46,6 +46,41 @@ export function registerRoutes(app: Express): Server {
     fs.mkdirSync(uploadsPath, { recursive: true });
   }
   app.use("/uploads", express.static(uploadsPath));
+  
+  // Ruta específica para archivos de storage (logos, etc.)
+  app.get("/api/storage/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsPath, filename);
+    
+    // Verificar que el archivo existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send("Archivo no encontrado");
+    }
+    
+    // Configurar el tipo MIME correcto
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    switch (ext) {
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case '.svg':
+        contentType = 'image/svg+xml';
+        break;
+      case '.pdf':
+        contentType = 'application/pdf';
+        break;
+    }
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache por 1 año
+    res.sendFile(filePath);
+  });
 
   // Ruta específica para verificar y servir documentos de manera segura
   app.get("/uploads/documents/:filename", (req, res) => {

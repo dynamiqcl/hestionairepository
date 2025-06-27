@@ -84,21 +84,21 @@ export function Layout({ children }: LayoutProps) {
         )}
       >
         <div className="h-full px-3 py-4 flex flex-col">
-          <div className="flex items-center mb-6 pl-2">
+          <div className="flex items-center justify-center mb-6 px-2">
             <img
-              src="/api/storage/hestion-logo.png"
+              src="/api/storage/hestion-logo-secondary.png"
               alt="Hestion Logo"
-              className="h-8"
+              className="h-10 w-auto"
             />
           </div>
           <div className="space-y-1 flex-1">
             {menuItems
               .filter(item => item.showFor.includes(user?.role || ""))
               .map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <a
+                <Link key={item.path} href={item.path} className="block">
+                  <div
                     className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg",
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors",
                       location === item.path
                         ? "bg-primary text-primary-foreground"
                         : "text-gray-600 hover:bg-gray-100"
@@ -106,7 +106,7 @@ export function Layout({ children }: LayoutProps) {
                   >
                     {item.icon}
                     <span className="ml-3">{item.title}</span>
-                  </a>
+                  </div>
                 </Link>
               ))}
           </div>

@@ -86,11 +86,10 @@ export function Layout({ children }: LayoutProps) {
         <div className="h-full px-3 py-4 flex flex-col">
           <div className="flex items-center mb-6 pl-2">
             <img
-              src="/logo.png"
-              alt="Logo"
+              src="/api/storage/hestion-logo.png"
+              alt="Hestion Logo"
               className="h-8"
             />
-            <span className="ml-3 text-xl font-semibold text-gray-800">Hestion</span>
           </div>
           <div className="space-y-1 flex-1">
             {menuItems

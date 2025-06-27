@@ -487,19 +487,18 @@ export default function Dashboard() {
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-4xl">
+                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
                                 <DialogHeader>
                                   <DialogTitle>Boleta {receipt.receiptId}</DialogTitle>
                                 </DialogHeader>
-                                <div className="relative w-full aspect-[3/4]">
+                                <div className="flex justify-center items-center w-full h-full max-h-[75vh] overflow-auto">
                                   <img
                                     src={receipt.imageUrl}
                                     alt={`Boleta ${receipt.receiptId}`}
-                                    className="object-contain w-full h-full max-h-[80vh]"
+                                    className="max-w-full max-h-full object-contain"
                                     style={{
-                                      maxWidth: '100%',
-                                      margin: '0 auto',
-                                      display: 'block'
+                                      height: 'auto',
+                                      width: 'auto'
                                     }}
                                     onError={(e) => {
                                       console.error('Error loading image:', receipt.imageUrl);

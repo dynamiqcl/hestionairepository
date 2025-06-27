@@ -418,7 +418,7 @@ export default function ReceiptsManager() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="w-[95vw] max-w-7xl h-[95vh] max-h-[95vh] p-4 sm:p-6">
+                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
                               <DialogHeader className="pb-4">
                                 <DialogTitle className="text-lg sm:text-xl">Boleta {receipt.receiptId}</DialogTitle>
                                 <DialogDescription className="text-sm">
@@ -426,13 +426,18 @@ export default function ReceiptsManager() {
                                 </DialogDescription>
                               </DialogHeader>
                               
-                              <div className="flex flex-col lg:flex-row gap-4 h-[calc(95vh-120px)] overflow-hidden">
+                              <div className="flex flex-col lg:flex-row gap-4 h-[calc(85vh-120px)] overflow-hidden">
                                 {/* Imagen */}
-                                <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
+                                <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg overflow-auto p-4">
                                   <img
                                     src={receipt.imageUrl || ''}
                                     alt={`Boleta ${receipt.receiptId}`}
-                                    className="max-w-full max-h-full object-contain w-auto h-auto"
+                                    className="max-w-full max-h-full object-contain"
+                                    style={{
+                                      maxHeight: 'calc(85vh - 200px)',
+                                      width: 'auto',
+                                      height: 'auto'
+                                    }}
                                     onError={(e) => {
                                       console.error('Error loading image:', receipt.imageUrl);
                                       e.currentTarget.src = 'https://via.placeholder.com/400x600?text=Error+al+cargar+imagen';

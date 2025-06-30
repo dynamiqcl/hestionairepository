@@ -10,7 +10,7 @@ import fs from "fs";
 import express from "express";
 import { randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
-import { analyzeReceiptImage } from "./openai";
+import { analyzeReceiptWithAzure } from "./azure-vision";
 import { uploadReceipt, uploadDocument, storageService } from "./storage";
 
 // El nuevo sistema de almacenamiento se importa desde storage.ts
@@ -408,9 +408,9 @@ export function registerRoutes(app: Express): Server {
       if (req.file) {
         const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
         
-        console.log("Analizando imagen de boleta con OpenAI (solo procesamiento)...");
-        const analysisResult = await analyzeReceiptImage(filePath);
-        console.log("Resultado del análisis OpenAI:", analysisResult);
+        console.log("Analizando imagen de boleta con Azure Computer Vision (solo procesamiento)...");
+        const analysisResult = await analyzeReceiptWithAzure(filePath);
+        console.log("Resultado del análisis Azure:", analysisResult);
         
         if (analysisResult.success) {
           extractedData = analysisResult.extractedData;
@@ -459,9 +459,9 @@ export function registerRoutes(app: Express): Server {
           imageUrl = storageService.getPublicUrl(req.file.filename, 'receipts');
           const filePath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
           
-          console.log("Analizando imagen de boleta con OpenAI...");
-          const analysisResult = await analyzeReceiptImage(filePath);
-          console.log("Resultado del análisis OpenAI:", analysisResult);
+          console.log("Analizando imagen de boleta con Azure Computer Vision...");
+          const analysisResult = await analyzeReceiptWithAzure(filePath);
+          console.log("Resultado del análisis Azure:", analysisResult);
           
           if (analysisResult.success) {
             extractedData = analysisResult.extractedData;
@@ -646,9 +646,9 @@ export function registerRoutes(app: Express): Server {
       const pdfPath = path.join(process.cwd(), "uploads", "receipts", req.file.filename);
       const imageUrl = storageService.getPublicUrl(req.file.filename, 'receipts');
       
-      console.log("Analizando PDF de boleta con OpenAI...");
-      const analysisResult = await analyzeReceiptImage(pdfPath);
-      console.log("Resultado del análisis OpenAI (PDF):", analysisResult);
+      console.log("Analizando PDF de boleta con Azure Computer Vision...");
+      const analysisResult = await analyzeReceiptWithAzure(pdfPath);
+      console.log("Resultado del análisis Azure (PDF):", analysisResult);
       
       // Si el análisis con OpenAI falló, devolver error
       if (!analysisResult.success) {

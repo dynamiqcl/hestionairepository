@@ -27,44 +27,44 @@ export async function analyzeReceiptImage(filePath: string) {
     const fileType = path.extname(filePath).toLowerCase();
     let base64Image: string;
     
-    // Procesamiento mejorado para PDFs
+    // Procesamiento específico para PDFs
     if (fileType === '.pdf') {
       try {
-        // Leer el PDF como base64
-        base64Image = await fileToBase64(filePath);
+        // Leer el archivo PDF
+        const fileBuffer = await readFile(filePath);
         
-        // Usar GPT-4o para procesar el PDF directamente
+        // Importar pdf-parse dinámicamente para evitar problemas de inicialización
+        const pdfParse = (await import('pdf-parse')).default;
+        
+        // Extraer texto del PDF
+        const pdfData = await pdfParse(fileBuffer);
+        const extractedText = pdfData.text;
+        
+        console.log('Texto extraído del PDF:', extractedText.substring(0, 500) + '...');
+        
+        // Procesar el texto con OpenAI (no Vision API)
         const response = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
             {
               role: "system",
-              content: `Eres un sistema especializado en extraer datos de boletas y facturas chilenas que están en formato PDF.
+              content: `Eres un sistema especializado en extraer datos de boletas y facturas chilenas a partir de texto extraído de PDFs.
               
-              Extrae la siguiente información:
+              Extrae la siguiente información del texto proporcionado:
               1. Fecha de emisión en formato YYYY-MM-DD
               2. Monto total en pesos chilenos (solo el número, sin separadores de miles)
               3. Nombre del vendedor o empresa
-              4. Categoría sugerida (elige entre: Alimentación, Transporte, Oficina, Servicios, Otros)
+              4. Categoría sugerida (elige entre: Alimentación, Transporte, Oficina, Servicios, Patente Municipal, Otros)
               5. Descripción detallada de la compra o servicio
               
               Responde ÚNICAMENTE en formato JSON con las propiedades: date, total, vendor, category, description.
-              Asegúrate de hacer tu mejor esfuerzo en interpretar el contenido aunque no se vea perfecto. Si no puedes determinar algún valor con certeza, usa valores razonables basados en el contexto.`
+              Asegúrate de hacer tu mejor esfuerzo en interpretar el contenido. Si no puedes determinar algún valor con certeza, usa valores razonables basados en el contexto.`
             },
             {
               role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Este es un PDF de una boleta o factura chilena. Extrae la información solicitada lo mejor posible."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:application/pdf;base64,${base64Image}`
-                  }
-                }
-              ],
+              content: `Analiza el siguiente texto extraído de un PDF de boleta o factura chilena y extrae la información solicitada:
+
+${extractedText}`
             }
           ],
           response_format: { type: "json_object" },

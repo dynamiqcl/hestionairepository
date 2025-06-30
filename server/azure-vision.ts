@@ -123,7 +123,7 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
-  // 2. Extraer monto total (patrones mejorados para boletas chilenas)
+  // 2. Extraer monto total (patrones mejorados para boletas chilenas y patentes)
   const amountPatterns = [
     // Patrón específico para "TOTAL: $ 44.995" (con punto como separador de miles)
     /total\s*:\s*\$\s*(\d{1,3}(?:\.\d{3})*)/i,
@@ -133,49 +133,85 @@ function analyzeChileanReceipt(text: string): {
     /total[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
     // Patrón para importes
     /importe[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
+    // Patrón específico para patentes comerciales - buscar números al final del documento
+    /(\d{2}\.\d{3})\s*$/m, // Busca números con punto en la última línea relevante
+    // Patrón para encontrar el último número grande (mayor a 1000)
+    /(\d{2}\.\d{3}|\d{5,})/g,
     // Patrón para cualquier monto con $ (pero será evaluado por contexto)
     /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/,
   ];
   
-  // Buscar el monto total con lógica simplificada
-  for (const pattern of amountPatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      try {
-        // Limpiar el número considerando formato chileno (puntos como separadores de miles)
-        let cleanAmount = match[1];
+  // Buscar el monto total con lógica específica para patentes comerciales
+  let foundTotal = false;
+  
+  // Primero, buscar patrones específicos de patente comercial
+  if (text.toLowerCase().includes('patente')) {
+    // Para patentes, buscar números que aparecen al final del documento
+    const lines = text.split('\n');
+    const lastLines = lines.slice(-10); // Últimas 10 líneas
+    
+    for (let i = lastLines.length - 1; i >= 0; i--) {
+      const line = lastLines[i].trim();
+      const numberMatch = line.match(/^(\d{2}\.\d{3})$/); // Formato específico XX.XXX
+      
+      if (numberMatch) {
+        const cleanAmount = numberMatch[1].replace('.', '');
+        const amount = parseInt(cleanAmount);
         
-        // Si tiene puntos y NO tiene coma, los puntos son separadores de miles
-        if (cleanAmount.includes('.') && !cleanAmount.includes(',')) {
-          // Formato chileno: 44.995 -> 44995
-          cleanAmount = cleanAmount.replace(/\./g, '');
-        } else if (cleanAmount.includes(',')) {
-          // Formato con coma como decimal: 44.995,50 -> 44995.50
-          cleanAmount = cleanAmount.replace(/\./g, '').replace(',', '.');
+        if (amount > 1000 && amount < 1000000) {
+          extractedData.total = amount;
+          foundTotal = true;
+          break;
         }
-        
-        const amount = parseFloat(cleanAmount);
-        
-        if (amount > 0 && amount < 10000000) { // Validar rango razonable
-          // Priorizar montos que aparecen cerca de la palabra "TOTAL"
-          const matchIndex = match.index || 0;
-          const context = text.substring(Math.max(0, matchIndex - 30), matchIndex + 100);
-          if (context.toLowerCase().includes('total')) {
-            extractedData.total = Math.round(amount);
-            break; // Este es definitivamente el total
-          } else if (extractedData.total === 0) {
-            // Si aún no tenemos un total, usar este como candidato
-            extractedData.total = Math.round(amount);
-          }
-        }
-      } catch (e) {
-        // Continuar con el siguiente patrón
       }
     }
   }
   
-  // 3. Extraer nombre del vendedor (patrones mejorados para boletas chilenas)
+  // Si no se encontró por el método de patente, usar patrones generales
+  if (!foundTotal) {
+    for (const pattern of amountPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        try {
+          // Limpiar el número considerando formato chileno (puntos como separadores de miles)
+          let cleanAmount = match[1];
+          
+          // Si tiene puntos y NO tiene coma, los puntos son separadores de miles
+          if (cleanAmount.includes('.') && !cleanAmount.includes(',')) {
+            // Formato chileno: 44.995 -> 44995
+            cleanAmount = cleanAmount.replace(/\./g, '');
+          } else if (cleanAmount.includes(',')) {
+            // Formato con coma como decimal: 44.995,50 -> 44995.50
+            cleanAmount = cleanAmount.replace(/\./g, '').replace(',', '.');
+          }
+          
+          const amount = parseFloat(cleanAmount);
+          
+          if (amount > 0 && amount < 10000000) { // Validar rango razonable
+            // Priorizar montos que aparecen cerca de la palabra "TOTAL"
+            const matchIndex = match.index || 0;
+            const context = text.substring(Math.max(0, matchIndex - 30), matchIndex + 100);
+            if (context.toLowerCase().includes('total')) {
+              extractedData.total = Math.round(amount);
+              break; // Este es definitivamente el total
+            } else if (extractedData.total === 0) {
+              // Si aún no tenemos un total, usar este como candidato
+              extractedData.total = Math.round(amount);
+            }
+          }
+        } catch (e) {
+          // Continuar con el siguiente patrón
+        }
+      }
+    }
+  }
+  
+  // 3. Extraer nombre del vendedor (patrones mejorados para boletas chilenas y patentes)
   const vendorPatterns = [
+    // Patrón específico para patentes comerciales con nombre de empresa
+    /([A-ZÁÉÍÓÚÑ\s&\.]{15,80})\s+[\d\.-]+\s*$/m,
+    // Patrón para líneas que contienen nombres de empresas largas
+    /^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s&\.]{15,80})(?:\s+[\d\.-]+)?$/m,
     // Patrón para "EMPRESA DESARROLLO GENERAL" después de RUT
     /rut[:\s]*[\d\.-]+\s*\n\s*([a-záéíóúñ\s&\.]{5,50})/i,
     // Patrón para empresa en líneas después de información de RUT
@@ -258,41 +294,48 @@ export async function analyzeReceiptWithAzure(filePath: string) {
     
     console.log(`Analizando archivo ${fileType}: ${fileName}`);
     
-    // Para PDFs, crear análisis básico basado en el nombre del archivo
+    // Para PDFs, usar Azure Computer Vision para extraer texto
     if (fileType === '.pdf') {
-      console.log('Procesando archivo PDF con análisis básico');
+      console.log('Extrayendo texto de PDF con Azure Computer Vision...');
       
-      let extractedData = {
-        date: new Date(),
-        total: 0,
-        vendor: 'Documento PDF',
-        category: 'Otros',
-        description: `Archivo PDF: ${fileName}`
-      };
+      const fileBuffer = fs.readFileSync(filePath);
       
-      // Análisis inteligente del nombre del archivo para PDFs
-      const fileNameLower = fileName.toLowerCase();
+      const results = await computerVisionClient.readInStream(fileBuffer);
+      const operationId = results.operationLocation.split('/').slice(-1)[0];
       
-      if (fileNameLower.includes('patente')) {
-        // Para patentes comerciales, usar información específica del documento subido
-        extractedData = {
-          date: new Date('2025-01-02'), // Fecha del documento
-          total: 33442, // Monto específico del documento de HP CONSULTING
-          vendor: 'HP CONSULTING E INVESTMENT GROUP LIMITADA',
-          category: 'Servicios',
-          description: 'Patente Municipal Comercial - Período Enero-Junio 2025'
-        };
-      } else if (fileNameLower.includes('boleta') || fileNameLower.includes('factura')) {
-        extractedData.category = 'Otros';
-        extractedData.description = 'Documento tributario';
-      } else if (fileNameLower.includes('compra')) {
-        extractedData.category = 'Otros';
-        extractedData.description = 'Comprobante de compra';
+      // Esperar a que la operación se complete
+      let readResults;
+      do {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        readResults = await computerVisionClient.getReadResult(operationId);
+      } while (readResults.status === 'running');
+      
+      if (readResults.status !== 'succeeded') {
+        throw new Error('Error al procesar el PDF con Azure Computer Vision');
       }
+      
+      // Extraer todo el texto
+      let extractedText = '';
+      if (readResults.analyzeResult?.readResults) {
+        for (const page of readResults.analyzeResult.readResults) {
+          if (page.lines) {
+            for (const line of page.lines) {
+              extractedText += line.text + '\n';
+            }
+          }
+        }
+      }
+      
+      console.log('Texto extraído exitosamente del PDF, analizando contenido...');
+      console.log('Texto extraído:', extractedText.substring(0, 300), '...');
+      
+      // Analizar el texto extraído usando los mismos patrones que para imágenes
+      const extractedData = analyzeChileanReceipt(extractedText);
       
       return {
         success: true,
-        extractedData
+        extractedData,
+        extractedText: extractedText.substring(0, 500)
       };
     }
     

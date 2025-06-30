@@ -123,15 +123,18 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
-  // 2. Extraer monto total (patrones comunes en boletas chilenas)
+  // 2. Extraer monto total (patrones mejorados para boletas chilenas)
   const amountPatterns = [
+    // Patrón específico para "TOTAL: $ 44.995" (con punto como separador de miles)
+    /total\s*:\s*\$\s*(\d{1,3}(?:\.\d{3})*)/i,
+    // Patrón para "TOTAL $ 44.995"
+    /total\s*\$\s*(\d{1,3}(?:\.\d{3})*)/i,
+    // Patrón general para totales
     /total[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
+    // Patrón para importes
     /importe[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
-    /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/g, // Buscar todos los montos con $
-    /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*pesos/i,
-    /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*clp/i,
-    // Patrón específico para "TOTAL : $ 6.190"
-    /total\s*:\s*\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
+    // Patrón para cualquier monto con $ (pero será evaluado por contexto)
+    /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/,
   ];
   
   // Buscar el monto total con lógica simplificada
@@ -139,8 +142,18 @@ function analyzeChileanReceipt(text: string): {
     const match = text.match(pattern);
     if (match && match[1]) {
       try {
-        // Limpiar el número: quitar puntos separadores de miles, cambiar coma por punto para decimales
-        let cleanAmount = match[1].replace(/\./g, '').replace(',', '.');
+        // Limpiar el número considerando formato chileno (puntos como separadores de miles)
+        let cleanAmount = match[1];
+        
+        // Si tiene puntos y NO tiene coma, los puntos son separadores de miles
+        if (cleanAmount.includes('.') && !cleanAmount.includes(',')) {
+          // Formato chileno: 44.995 -> 44995
+          cleanAmount = cleanAmount.replace(/\./g, '');
+        } else if (cleanAmount.includes(',')) {
+          // Formato con coma como decimal: 44.995,50 -> 44995.50
+          cleanAmount = cleanAmount.replace(/\./g, '').replace(',', '.');
+        }
+        
         const amount = parseFloat(cleanAmount);
         
         if (amount > 0 && amount < 10000000) { // Validar rango razonable
@@ -184,9 +197,27 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
+  // Si no encontramos vendedor con patrones específicos, buscar nombres conocidos
+  if (extractedData.vendor === 'No identificado') {
+    const vendorKeywords = [
+      /CARNES DON MATIAS/i,
+      /DON MATÍAS/i,
+      /EMPRESA DESARROLLO GENERAL/i,
+      /DESARROLLO GENERAL/i,
+    ];
+    
+    for (const keyword of vendorKeywords) {
+      const match = text.match(keyword);
+      if (match) {
+        extractedData.vendor = match[0];
+        break;
+      }
+    }
+  }
+  
   // 4. Categorizar basado en palabras clave (ampliado para boletas chilenas)
   const categoryKeywords = {
-    'Alimentación': ['supermercado', 'restaurant', 'comida', 'panadería', 'carnicería', 'verdulería', 'café', 'almacén', 'market', 'desarrollo general', 'papas', 'crema', 'bebida', 'alimento'],
+    'Alimentación': ['supermercado', 'restaurant', 'comida', 'panadería', 'carnicería', 'verdulería', 'café', 'almacén', 'market', 'desarrollo general', 'papas', 'crema', 'bebida', 'alimento', 'carnes', 'lomo', 'vetado', 'mayorista'],
     'Transporte': ['taxi', 'uber', 'metro', 'bus', 'gasolina', 'combustible', 'estacionamiento', 'peaje', 'transporte'],
     'Oficina': ['papel', 'tinta', 'oficina', 'papelería', 'computador', 'impresora', 'software', 'licencia'],
     'Servicios': ['patente', 'municipal', 'notaría', 'abogado', 'contador', 'consultoría', 'asesoría', 'mantención'],

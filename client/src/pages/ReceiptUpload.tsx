@@ -622,16 +622,16 @@ export default function ReceiptUpload() {
                     <Input
                       id={`total-${receipt.id}`}
                       type="number"
-                      value={receipt.editedData.total}
+                      value={receipt.editedData.total || ''}
                       onChange={(e) => setReceipts(prev => prev.map(r => {
                         if (r.id === receipt.id && r.editedData) {
-                          const value = parseFloat(e.target.value);
+                          const value = parseFloat(e.target.value) || 0;
                           return {
                             ...r,
                             editedData: {
                               ...r.editedData,
                               total: value,
-                              taxAmount: value * 0.19
+                              taxAmount: Math.round(value * 0.19)
                             }
                           };
                         }

@@ -42,7 +42,7 @@ export default function AuthPage() {
       <div className="hidden lg:flex w-1/2 bg-primary items-center justify-center p-8">
         <div className="max-w-lg text-white">
           <h1 className="text-4xl font-bold mb-4">Bienvenidos a Hestion App</h1>
-          <p className="text-lg text-primary-foreground/90 mb-8 text-justify">
+          <p className="text-base text-primary-foreground/90 mb-8 text-justify">
             En Hestión trabajamos cada día para mejorar tu gestión tributaria, asegurando que tu información esté siempre clara, disponible y al día. Esta plataforma ha sido diseñada para acompañarte en la rendición de gastos y la gestión documental de tu empresa, de forma simple, ordenada y eficiente.
           </p>
           <div className="grid grid-cols-2 gap-4 text-sm">

@@ -54,7 +54,7 @@ export function Layout({ children }: LayoutProps) {
       showFor: ["CLIENTE", "ADMINISTRADOR", "EMPLEADO"],
     },
     {
-      title: "Getión de Empresas",
+      title: "Gestión de Empresas",
       icon: <Building2 className="w-5 h-5" />,
       path: "/companies",
       showFor: ["ADMINISTRADOR"],

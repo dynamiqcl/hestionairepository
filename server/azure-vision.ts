@@ -127,21 +127,33 @@ function analyzeChileanReceipt(text: string): {
   const amountPatterns = [
     /total[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
     /importe[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
-    /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/,
+    /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/g, // Buscar todos los montos con $
     /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*pesos/i,
     /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*clp/i,
+    // Patrón específico para "TOTAL : $ 6.190"
+    /total\s*:\s*\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i,
   ];
   
+  // Buscar el monto total con lógica simplificada
   for (const pattern of amountPatterns) {
     const match = text.match(pattern);
-    if (match) {
+    if (match && match[1]) {
       try {
         // Limpiar el número: quitar puntos separadores de miles, cambiar coma por punto para decimales
         let cleanAmount = match[1].replace(/\./g, '').replace(',', '.');
         const amount = parseFloat(cleanAmount);
+        
         if (amount > 0 && amount < 10000000) { // Validar rango razonable
-          extractedData.total = Math.round(amount);
-          break;
+          // Priorizar montos que aparecen cerca de la palabra "TOTAL"
+          const matchIndex = match.index || 0;
+          const context = text.substring(Math.max(0, matchIndex - 30), matchIndex + 100);
+          if (context.toLowerCase().includes('total')) {
+            extractedData.total = Math.round(amount);
+            break; // Este es definitivamente el total
+          } else if (extractedData.total === 0) {
+            // Si aún no tenemos un total, usar este como candidato
+            extractedData.total = Math.round(amount);
+          }
         }
       } catch (e) {
         // Continuar con el siguiente patrón
@@ -149,11 +161,16 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
-  // 3. Extraer nombre del vendedor
+  // 3. Extraer nombre del vendedor (patrones mejorados para boletas chilenas)
   const vendorPatterns = [
+    // Patrón para "EMPRESA DESARROLLO GENERAL" después de RUT
+    /rut[:\s]*[\d\.-]+\s*\n\s*([a-záéíóúñ\s&\.]{5,50})/i,
+    // Patrón para empresa en líneas después de información de RUT
     /(?:empresa|negocio|comercio|tienda)[:\s]+([^\n\r]{5,50})/i,
-    /rut[:\s]+[\d\.-]+[^\n\r]*?([a-záéíóúñ\s]{5,50})/i,
-    /^([A-ZÁÉÍÓÚÑ][a-záéíóúñ\s&\.]{10,60})$/m,
+    // Patrón para nombres de empresa en mayúsculas típicos de boletas
+    /^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s&\.]{10,60})$/m,
+    // Patrón específico para el formato de esta boleta
+    /EMPRESA\s+([A-ZÁÉÍÓÚÑ\s]+)/i,
   ];
   
   for (const pattern of vendorPatterns) {
@@ -167,9 +184,9 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
-  // 4. Categorizar basado en palabras clave
+  // 4. Categorizar basado en palabras clave (ampliado para boletas chilenas)
   const categoryKeywords = {
-    'Alimentación': ['supermercado', 'restaurant', 'comida', 'panadería', 'carnicería', 'verdulería', 'café', 'almacén', 'market'],
+    'Alimentación': ['supermercado', 'restaurant', 'comida', 'panadería', 'carnicería', 'verdulería', 'café', 'almacén', 'market', 'desarrollo general', 'papas', 'crema', 'bebida', 'alimento'],
     'Transporte': ['taxi', 'uber', 'metro', 'bus', 'gasolina', 'combustible', 'estacionamiento', 'peaje', 'transporte'],
     'Oficina': ['papel', 'tinta', 'oficina', 'papelería', 'computador', 'impresora', 'software', 'licencia'],
     'Servicios': ['patente', 'municipal', 'notaría', 'abogado', 'contador', 'consultoría', 'asesoría', 'mantención'],

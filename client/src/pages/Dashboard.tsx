@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useReceipts } from "@/hooks/use-receipts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { BarChart, Calendar, DollarSign, Receipt, LogOut, Download, Pencil, Trash2, Bell, Plus, Settings, Eye, FileText, RefreshCw } from "lucide-react";
 import { UserMessage } from "@/components/ui/user-message";
 import {
   Dialog,
@@ -33,7 +34,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import {
   DropdownMenu,
@@ -64,6 +64,7 @@ const formatCLP = (amount: number) => {
 
 export default function Dashboard() {
   const { data: receipts, isLoading, deleteReceipt } = useReceipts();
+  const queryClient = useQueryClient();
   const { user, logout, isAdmin } = useAuth();
   const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -101,8 +102,14 @@ export default function Dashboard() {
     queryKey: ['/api/categories'],
   });
 
+  // Debug: Log all receipts and user info
+  console.log('Debug - All receipts:', receipts?.length || 0, receipts?.slice(0, 5));
+  console.log('Debug - Current user:', user?.id, user?.username);
+  console.log('Debug - Filtered receipts:', filteredReceipts?.length || 0);
+  
   // Calcular totales y datos para el gráfico usando los recibos filtrados
   const userFilteredReceipts = filteredReceipts?.filter(receipt => receipt.userId === user?.id) || [];
+  console.log('Debug - User filtered receipts:', userFilteredReceipts.length, userFilteredReceipts.slice(0, 3));
   const totalAmount = userFilteredReceipts.reduce((sum, receipt) => sum + Number(receipt.total), 0);
   const receiptCount = userFilteredReceipts.length;
   
@@ -387,12 +394,30 @@ export default function Dashboard() {
             <CardTitle>Ultimas Boletas Rendidas</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Mostrando las 5 boletas más recientes</p>
           </div>
-          <Link href="/receipts">
-            <Button variant="outline" size="sm" className="gap-1">
-              <Eye className="w-4 h-4" />
-              Ver todas
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1"
+              onClick={() => {
+                console.log('Actualizando datos de boletas...');
+                queryClient.invalidateQueries({ queryKey: ['/api/receipts'] });
+                toast({
+                  title: "Actualizando",
+                  description: "Cargando las boletas más recientes...",
+                });
+              }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Actualizar
             </Button>
-          </Link>
+            <Link href="/receipts">
+              <Button variant="outline" size="sm" className="gap-1">
+                <Eye className="w-4 h-4" />
+                Ver todas
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -460,7 +485,7 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).slice(0, 5).map((receipt) => (
+                    {filteredReceipts?.filter(receipt => receipt.userId === user?.id).sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()).slice(0, 5).map((receipt) => (
                       <TableRow key={receipt.id}>
                         <TableCell>
                           <Checkbox

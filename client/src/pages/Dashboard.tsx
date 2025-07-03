@@ -79,7 +79,12 @@ export default function Dashboard() {
   const [selectedDocCategory, setSelectedDocCategory] = useState("");
   const [selectedReceipts, setSelectedReceipts] = useState<number[]>([]);
 
-  const filteredReceipts = receipts?.filter(receipt => {
+  // Primero eliminamos duplicados por ID de boleta
+  const uniqueReceipts = receipts?.filter((receipt, index, self) => 
+    index === self.findIndex(r => r.id === receipt.id)
+  );
+
+  const filteredReceipts = uniqueReceipts?.filter(receipt => {
     const receiptDate = new Date(receipt.date);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;

@@ -480,11 +480,22 @@ export function registerRoutes(app: Express): Server {
       const receiptDescription = extractedData?.description || req.body.description || "";
       
       // Obtener el categoryId basado en el nombre de la categoría
-      const categoryId = await db
+      let categoryId = await db
         .select({ id: categories.id })
         .from(categories)
         .where(eq(categories.name, receiptCategory))
         .then(rows => rows[0]?.id);
+      
+      // Si no existe la categoría, usar "Otros" por defecto
+      if (!categoryId) {
+        const otrosCategory = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.name, 'Otros'))
+          .then(rows => rows[0]?.id);
+        
+        categoryId = otrosCategory || 15; // ID 15 es "Otros" por defecto
+      }
 
       // Obtener el último receiptId
       const lastReceipt = await db
@@ -667,18 +678,17 @@ export function registerRoutes(app: Express): Server {
         .where(eq(categories.name, extractedData.category))
         .then(rows => rows[0]?.id);
         
-      // Si no existe la categoría, crear una nueva
+      // Si no existe la categoría, usar "Otros" por defecto
       let finalCategoryId = categoryId;
       if (!finalCategoryId) {
-        const [newCategory] = await db
-          .insert(categories)
-          .values({
-            name: extractedData.category,
-            description: `Categoría creada automáticamente para boleta de ${extractedData.vendor}`,
-            createdBy: req.user!.id
-          })
-          .returning();
-        finalCategoryId = newCategory.id;
+        // Buscar la categoría "Otros" como fallback
+        const otrosCategory = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.name, 'Otros'))
+          .then(rows => rows[0]?.id);
+        
+        finalCategoryId = otrosCategory || 15; // ID 15 es "Otros" por defecto
       }
       
       // Obtener el último receiptId

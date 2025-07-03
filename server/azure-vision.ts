@@ -251,14 +251,20 @@ function analyzeChileanReceipt(text: string): {
     }
   }
   
-  // 4. Categorizar basado en palabras clave (ampliado para boletas chilenas)
+  // 4. Categorizar basado en palabras clave usando solo categorías existentes
   const categoryKeywords = {
     'Alimentación': ['supermercado', 'restaurant', 'comida', 'panadería', 'carnicería', 'verdulería', 'café', 'almacén', 'market', 'desarrollo general', 'papas', 'crema', 'bebida', 'alimento', 'carnes', 'lomo', 'vetado', 'mayorista'],
-    'Transporte': ['taxi', 'uber', 'metro', 'bus', 'gasolina', 'combustible', 'estacionamiento', 'peaje', 'transporte'],
-    'Oficina': ['papel', 'tinta', 'oficina', 'papelería', 'computador', 'impresora', 'software', 'licencia'],
-    'Servicios': ['patente', 'municipal', 'notaría', 'abogado', 'contador', 'consultoría', 'asesoría', 'mantención'],
-    'Salud': ['farmacia', 'médico', 'clínica', 'hospital', 'dentista', 'medicamento', 'consulta'],
-    'Hogar': ['ferretería', 'construcción', 'limpieza', 'hogar', 'mueble', 'decoración']
+    'Movilización': ['taxi', 'uber', 'metro', 'bus', 'gasolina', 'combustible', 'estacionamiento', 'peaje', 'transporte', 'bencina', 'tag'],
+    'Oficina': ['papel', 'tinta', 'oficina', 'papelería', 'computador', 'impresora', 'software', 'licencia', 'patente', 'arriendo', 'servicios básicos', 'limpieza', 'artículos de escritorio'],
+    'Profesionales': ['capacitación', 'diplomado', 'magister', 'doctorado', 'curso', 'seminario', 'colegiatura', 'seguro responsabilidad civil', 'abogado', 'contador', 'consultoría', 'asesoría'],
+    'Comunicaciones': ['telefonía', 'internet', 'cable', 'móvil', 'fija'],
+    'Publicidad': ['marketing', 'campañas', 'redes sociales', 'publicidad'],
+    'Representación': ['comidas de negocio', 'hospedaje', 'entradas a eventos', 'regalos', 'material promocional', 'networking'],
+    'Mantención & Remodelación': ['reparaciones', 'mantenimiento', 'arreglo', 'equipos tecnológicos', 'materiales de construcción', 'diseño', 'muebles', 'ornamentación'],
+    'Suscripciones': ['suscripción', 'plataformas', 'servicios digitales'],
+    'Equipamiento': ['computadores', 'tablet', 'celulares', 'equipos de trabajo'],
+    'Honorarios': ['honorarios', 'boleta de honorarios', 'socios'],
+    'Otros': ['farmacia', 'médico', 'clínica', 'hospital', 'dentista', 'medicamento', 'consulta', 'ferretería', 'construcción', 'hogar', 'mueble', 'decoración']
   };
   
   const textLower = text.toLowerCase();

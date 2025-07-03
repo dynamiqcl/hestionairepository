@@ -28,7 +28,14 @@ export default function CompanyManager() {
   }
 
   const { data: companies } = useQuery({
-    queryKey: ['/api/companies'],
+    queryKey: ['/api/admin/companies'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/companies', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error al obtener empresas');
+      return response.json();
+    }
   });
 
   const { data: users } = useQuery({
@@ -49,7 +56,7 @@ export default function CompanyManager() {
       if (!response.ok) throw new Error(await response.text());
 
       toast({ title: "¡Éxito!", description: "Empresa creada correctamente" });
-      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/companies'] });
       setNewCompany({ name: "", rut: "", direccion: "", userId: "" });
       setIsCreating(false);
     } catch (error) {
@@ -74,7 +81,7 @@ export default function CompanyManager() {
       if (!response.ok) throw new Error(await response.text());
 
       toast({ title: "¡Éxito!", description: "Empresa actualizada correctamente" });
-      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/companies'] });
       setEditingCompany(null);
     } catch (error) {
       toast({
@@ -95,7 +102,7 @@ export default function CompanyManager() {
       if (!response.ok) throw new Error(await response.text());
 
       toast({ title: "¡Éxito!", description: "Empresa eliminada correctamente" });
-      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/companies'] });
     } catch (error) {
       toast({
         title: "Error",

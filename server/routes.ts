@@ -269,12 +269,29 @@ export function registerRoutes(app: Express): Server {
 
 
   // Rutas de empresas
-  app.get("/api/companies", ensureAuth, ensureAdmin, async (req, res) => {
+  // Endpoint para obtener empresas del usuario (para subir boletas)
+  app.get("/api/companies", ensureAuth, async (req, res) => {
     try {
+      // Solo mostrar empresas asignadas al usuario actual
       const userCompanies = await db
         .select()
-        .from(companies);
+        .from(companies)
+        .where(eq(companies.userId, req.user!.id));
+      
       res.json(userCompanies);
+    } catch (error) {
+      console.error("Error al obtener empresas:", error);
+      res.status(500).json({ error: "Error al obtener empresas" });
+    }
+  });
+
+  // Endpoint para el mantenedor de empresas (solo admin)
+  app.get("/api/admin/companies", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const allCompanies = await db
+        .select()
+        .from(companies);
+      res.json(allCompanies);
     } catch (error) {
       console.error("Error al obtener empresas:", error);
       res.status(500).json({ error: "Error al obtener empresas" });

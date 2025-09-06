@@ -45,4 +45,4 @@ waitForPort = 5000
 defaultBucketID = "replit-objstore-ae76f963-55b3-42cb-9db6-afb67dc266c7"
 
 [agent]
-integrations = ["javascript_auth==1.0.0", "javascript_openai==1.0.0"]
+integrations = ["javascript_openai==1.0.0", "javascript_auth==1.0.0"]
